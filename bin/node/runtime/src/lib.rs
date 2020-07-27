@@ -246,29 +246,32 @@ impl address_valid::Trait for Runtime {
 
 parameter_types! {
 	pub const TranRuntime: Runtime = Runtime;
-	// 将算力汇总信息归档到链上并不再修改
+	// 归档时间
 	pub const ArchiveDuration: BlockNumber = ArchiveDurationTime;
-	pub const RemovePersonRecordDuration: BlockNumber = 7*DAYS;
+	// 最多保存多少天的挖矿记录
+	pub const RemovePersonRecordDuration: BlockNumber = 30*DAYS;
 
-	// 挖矿奖励金额
+	// 第一年每天的挖矿奖励
 	pub const FirstYearPerDayMineRewardToken: Balance = 2100_0000*DOLLARS/2/4/36525*100; // 这里一年直接用365.25天来算
 
 	pub const Alpha: Permill = Permill::from_percent(50);
+	// 客户端挖矿奖励占比
 	pub const AmountPowerPortionRatio: Permill = Permill::from_percent(50);
 
 	// 这个数额是多少需要斟酌
 	//*********************************************************************************************
-	pub const MoreThanPortionNeedMinCount: u64 = 100;
-	pub const MoreThanPortionNeedMinAmount:u64 = USDT_DECIMALS * INIT_AMOUNT_POWER * 2 * 100; // 次数的10倍
-
+	// 如果有上上级 膨胀多少个百分比的算力
 	pub const SuperiorInflationRatio: Permill = Permill::from_percent(25);
+	// 如果有上级 膨胀多少个百分比的算力
 	pub const FatherInflationRatio: Permill = Permill::from_percent(50);
-
+	// 每次挖矿创始团队拿多少占比的奖励
 	pub const FoundationShareRatio: u32 = 20;
 	pub const MinerSharePortion: u32 = 100;
 	pub const FatherSharePortion: u32 = 50;
 	pub const SuperSharePortion: u32 = 25;
 	// ********************************************************************************************
+
+	// 单次金额算力硬顶（没有次数 因为每次都是1）
 	pub const MLAbtc: USD = 10_0000 * USDT_DECIMALS;
 	pub const MLAeth: USD = 4_0000 * USDT_DECIMALS;
 	pub const MLAeos: USD = 1_0000 * USDT_DECIMALS;
@@ -290,7 +293,6 @@ parameter_types! {
 
 	pub const LAecap: USD = 100_0000_00000;
 	pub const LCecap: Count = 100_0000;
-
 
 	pub const ClientWorkPowerRatio: u64 = 50;
 	pub const PerDayMinReward: Balance = 100*DOLLARS;

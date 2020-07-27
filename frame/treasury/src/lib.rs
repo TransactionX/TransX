@@ -359,15 +359,15 @@ decl_module! {
 		}
 
 
-		// 给国库铸币
-		#[weight = 50_000]
-		fn mint_for_treasury(origin, balances: BalanceOf<T>) {
-			/// 给国库铸币
-			ensure_root(origin)?;
-			T::ShouldAddOrigin::on_unbalanced(T::Currency::deposit_creating(&Self::account_id(), balances));
-			Self::deposit_event(RawEvent::Minted);
-
-		}
+// 		// 给国库铸币
+// 		#[weight = 50_000]
+// 		fn mint_for_treasury(origin, balances: BalanceOf<T>) {
+// 			/// 给国库铸币
+// 			ensure_root(origin)?;
+// 			T::ShouldAddOrigin::on_unbalanced(T::Currency::deposit_creating(&Self::account_id(), balances));
+// 			Self::deposit_event(RawEvent::Minted);
+//
+// 		}
 
 		// 销毁国库的币
 		#[weight = 50_000]
