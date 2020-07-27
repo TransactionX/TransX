@@ -225,8 +225,16 @@ decl_module! {
 
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 
+		const VoteRewardPeriod: T::BlockNumber = T::VoteRewardPeriod::get();
+		const ReportReserve: BalanceOf<T> = T::ReportReserve::get();
+		const ReportReward: BalanceOf<T> = T::ReportReward::get();
+		const CancelReportSlash: BalanceOf<T> = T::CancelReportSlash::get();
+		const IllegalPunishment: BalanceOf<T> = T::IllegalPunishment::get();
+		const CouncilReward: BalanceOf<T> = T::CouncilReward::get();
+
 		type Error = Error<T>;
 		pub fn deposit_event() = default;
+
 
 
 		#[weight = 500_000]

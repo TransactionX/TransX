@@ -209,6 +209,9 @@ decl_module! {
 
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		// Initializing events
+		const UnBondingDuration: T::BlockNumber = T::UnBondingDuration::get();
+		const PledgeAmount: BalanceOf<T> = T::PledgeAmount::get();
+
 		type Error = Error<T>;
 		fn deposit_event() = default;
 

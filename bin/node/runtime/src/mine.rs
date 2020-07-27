@@ -236,7 +236,9 @@ pub trait Trait: balances::Trait + RegisterTrait {
 
 	type SubHalfDuration: Get<Duration>;  // 减半周期
 
+	// 这个参数目前已经丢弃
 	type Alpha: Get<Permill>;  // 钝化系数  0.3就直接写30  0.5是50
+
 	type AmountPowerPortionRatio: Get<Permill>; // 金额算力在总算力中的占比系数 一般是0.5（写50）
 
 	// 创始团队成员的分润占比（20% 写20； 25% 写25；以此类推）
@@ -534,9 +536,30 @@ decl_error! {
 
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+
+    	const ArchiveDuration: T::BlockNumber = T::ArchiveDuration::get();
+    	const RemovePersonRecordDuration: T::BlockNumber = T::RemovePersonRecordDuration::get();
+    	const FirstYearPerDayMineRewardToken: BalanceOf<T> = T::FirstYearPerDayMineRewardToken::get();
+
+    	/// 金额算力的奖励占比
+    	const AmountPowerPortionRatio: Permill = T::AmountPowerPortionRatio::get();
+
+    	/// 客户端挖矿的奖励占比
+    	const ClientWorkPowerRatio: u64 = T::ClientWorkPowerRatio::get();
+
+    	/// 单日全网最低的奖励金额
+		const PerDayMinReward: BalanceOf<T> = T::PerDayMinReward::get();
+
+    	/// 钝化指数
+    	const DeclineExp: u64 = T::DeclineExp::get();
+
+    	/// 创始团队成员的分润比例
+    	const FoundationShareRatio: u32 = T::FoundationShareRatio::get();
+
+
     	type Error = Error<T>;
         fn deposit_event() = default;
-        const ArchiveDuration: T::BlockNumber = T::ArchiveDuration::get();
+
 
 		#[weight = 50_000]
         pub fn create_mine(
@@ -943,9 +966,9 @@ impl<T: Trait> Module<T> {
 					n @ _ => n,
 			};
 
-		// 这两个参数是相对的 一个放金额一个放次数
-        let alpha = <Alpha>::get();
-        let beta = Permill::from_percent(100).saturating_sub(alpha);
+// 		// 这两个参数是相对的 一个放金额一个放次数
+//         let alpha = <Alpha>::get();
+//         let beta = Permill::from_percent(100).saturating_sub(alpha);
 
 		// 获取矿工当日算力信息
 		let token_power_of = <MinerPowerInfoStoreItem<T>>::get_miner_power_info(

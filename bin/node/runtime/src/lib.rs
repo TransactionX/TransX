@@ -162,7 +162,7 @@ parameter_types!{
 	pub const ReportReward: Balance = 250*DOLLARS;
 	pub const IllegalPunishment: Balance = 500*DOLLARS;
 	pub const CouncilReward: Balance = 10*DOLLARS;
-	pub const Threshould: u32 = 7;
+// 	pub const Threshould: u32 = 7;
 	pub const CancelReportSlash: Balance = 1*DOLLARS;
 }
 
@@ -188,11 +188,11 @@ impl report::Trait for Runtime {
 
 parameter_types! {
 	pub const ChangeAddressMaxCount: u32 = 2;
-	pub const TxsMaxCount: u32 = 5;   // todo 上线调为 1000
+	pub const TxsMaxCount: u32 = 1000;   // todo 上线调为 1000
 	// 注册抵押金额
-	pub const PledgeAmount: Balance = 20000 * DOLLARS;
+	pub const PledgeAmount: Balance = 250 * DOLLARS;
 
-	pub const UnBondingDuration: BlockNumber = 5 * MINUTES;
+	pub const UnBondingDuration: BlockNumber = 7 * DAYS;  // 解压资金需要7天
 }
 
 impl register::Trait for Runtime {
@@ -208,7 +208,7 @@ impl register::Trait for Runtime {
 	}
 
 parameter_types! {
-	pub const TxFetchNumber:BlockNumber = 10; // todo:线上改为1小时清1次
+	pub const TxFetchNumber:BlockNumber = 1; // todo:线上改为1小时清1次
 //	pub const TwoHour:BlockNumber = 20 ; // TODO:上线环境改为 2 小时 2*HOURS
 	pub const Hour:BlockNumber = HOURS;
 }
@@ -233,25 +233,13 @@ impl offchain_common::TxValidLocalAuthorityTrait for Runtime {
 
 impl tx_valid::Trait for Runtime {
 	type Event = Event;
-//	type Call = Call;
-//	type SubmitSignedTransaction = SubmitTxValidTransaction;
-//	type SubmitUnsignedTransaction = SubmitTxValidTransaction;
-//	type AuthorityId = tx_valid::tx_crypto::AuthorityId;
+
 	type Duration = TxFetchNumber;
 }
 
-//type SubmitAddressValidTransaction = frame_system::offchain::TransactionSubmitter<
-//	address_valid::address_crypto::AuthorityId,
-//	Runtime,
-//	UncheckedExtrinsic
-//>;
-
 impl address_valid::Trait for Runtime {
 	type Event = Event;
-//	type Call = Call;
-//	type SubmitSignedTransaction = SubmitAddressValidTransaction;
-//	type SubmitUnsignedTransaction = SubmitAddressValidTransaction;
-//	type AuthorityId = address_valid::address_crypto::AuthorityId;
+
 	type Duration = TxFetchNumber;
 	type UnsignedPriority = OffchainWorkUnsignedPriority;
 }
@@ -621,13 +609,13 @@ pallet_staking_reward_curve::build! {
 }
 
 parameter_types! {
-	pub const SessionsPerEra: sp_staking::SessionIndex = 6;
-	pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
-	pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
+	pub const SessionsPerEra: sp_staking::SessionIndex = 6;  // 6小时（说明一个era6小时)
+	pub const BondingDuration: pallet_staking::EraIndex = 28; // 7天
+	pub const SlashDeferDuration: pallet_staking::EraIndex = 28; // 7天
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
 	pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
 	pub const MaxNominatorRewardedPerValidator: u32 = 64;
-	pub const MaxIterations: u32 = 5;
+	pub const MaxIterations: u32 = 10;
 }
 
 impl pallet_staking::Trait for Runtime {
@@ -654,15 +642,15 @@ impl pallet_staking::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 10 * MINUTES;
-	pub const VotingPeriod: BlockNumber = 5 * MINUTES;
-	pub const FastTrackVotingPeriod: BlockNumber = 5 * MINUTES;
+	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
+	pub const VotingPeriod: BlockNumber = 7 * DAYS;
+	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
 	pub const InstantAllowed: bool = true;
-	pub const MinimumDeposit: Balance = 100 * DOLLARS;
-	pub const EnactmentPeriod: BlockNumber = 5 * MINUTES;
-	pub const CooloffPeriod: BlockNumber = 5 * MINUTES;
+	pub const MinimumDeposit: Balance = 1 * DOLLARS;
+	pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
+	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	// One cent: $10,000 / MB
-	pub const PreimageByteDeposit: Balance = 1 * CENTS;
+	pub const PreimageByteDeposit: Balance = 1 * MILLICENTS;
 }
 
 impl pallet_democracy::Trait for Runtime {
@@ -698,7 +686,7 @@ impl pallet_democracy::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -710,9 +698,9 @@ impl pallet_collective::Trait<CouncilCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 10 * DOLLARS;
-	pub const VotingBond: Balance = 1 * DOLLARS;
-	pub const TermDuration: BlockNumber = 20 * MINUTES;//7 * DAYS;
+	pub const CandidacyBond: Balance = 1 * DOLLARS;
+	pub const VotingBond: Balance = 5 * CENTS;
+	pub const TermDuration: BlockNumber = 24 * HOURS;
 	pub const DesiredMembers: u32 = 7;
 	pub const DesiredRunnersUp: u32 = 4;
 	pub const ElectionsPhragmenModuleId: LockIdentifier = *b"phrelect";
@@ -738,7 +726,7 @@ impl pallet_elections_phragmen::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const TransxFoundationMotionDuration: BlockNumber = 5 * DAYS;
+	pub const TransxFoundationMotionDuration: BlockNumber = 3 * DAYS;
 }
 // transx基金会
 type TransxFoundation = pallet_collective::Instance3;
@@ -752,7 +740,7 @@ impl pallet_collective::Trait<TransxFoundation> for Runtime {  // 这个写法�
 }
 
 parameter_types! {
-	pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+	pub const TechnicalMotionDuration: BlockNumber = 3 * DAYS;
 }
 
 
@@ -777,9 +765,10 @@ impl pallet_membership::Trait<pallet_membership::Instance1> for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
-	pub const SpendPeriod: BlockNumber = 1 * DAYS;
+	pub const ProposalBondMinimum: Balance = 20 * DOLLARS;
+	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(0);  // 不需要销毁
+
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
