@@ -187,24 +187,20 @@ impl report::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const ChangeAddressMaxCount: u32 = 2;
-	pub const TxsMaxCount: u32 = 1000;   // todo 上线调为 1000
-	// 注册抵押金额
-	pub const PledgeAmount: Balance = 250 * DOLLARS;
 
-	pub const UnBondingDuration: BlockNumber = 7 * DAYS;  // 解压资金需要7天
+	pub const ChangeAddressMaxCount: u32 = 2;
+	pub const TxsMaxCount: u32 = 1000;
+
+	pub const UnBondTime: BlockNumber = 28 * DAYS;
 }
 
 impl register::Trait for Runtime {
 
-	type PledgeAmount = PledgeAmount;
 	type Event = Event;
 	type Currency1 = Balances;
-
-	// 一条链下的地址最多更改次数（能够使用的情况下
 	type ChangeAddressMaxCount = ChangeAddressMaxCount;
 	type TxsMaxCount = TxsMaxCount;
-	type UnBondingDuration = UnBondingDuration;
+	type UnBondTime = UnBondTime;
 	}
 
 parameter_types! {
@@ -1104,7 +1100,7 @@ construct_runtime!(
 		Recovery: pallet_recovery::{Module, Call, Storage, Event<T>},
 		Vesting: pallet_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
-		Register: register::{Module, Call, Storage, Event<T>, Config<T>},
+		Register: register::{Module, Call, Storage, Event<T>},
 		Report: report::{Module, Call, Storage, Event<T>, Config<T>},
 		Mine: mine::{Module, Storage, Call, Event<T>, Config<T>},
 		Nicks: pallet_nicks::{Module, Call, Storage, Event<T>},

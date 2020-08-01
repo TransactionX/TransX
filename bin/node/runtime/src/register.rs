@@ -12,12 +12,13 @@ use system::{ensure_signed, ensure_root};
 use sp_runtime::{DispatchResult, Perbill, Permill, Percent};
 use pallet_timestamp;
 use codec::{Encode, Decode};
-use crate::constants::symbol::*;
+use crate::constants::{symbol::*, currency::DOLLARS};
+use sp_std::convert::{TryInto,TryFrom, Into};
 
 pub const REGISTER_ID: LockIdentifier = *b"register";
 
 
-// 机器状态
+/// 机器状态
 #[cfg_attr(feature = "std", derive())]
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum MinerStatus{
@@ -35,13 +36,13 @@ impl Default for MinerStatus{
 
 #[cfg_attr(feature = "std", derive())]
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-// 这个用于表述地址状态
+/// 这个用于表述地址状态
 pub enum AddressStatus{
 	active,  // 已经激活
 	inActive,  // 未激活
 }
 
-// enum中derive不了Default
+/// enum中derive不了Default
 impl Default for AddressStatus{
 	fn default() -> Self {
 		Self::inActive
@@ -49,6 +50,7 @@ impl Default for AddressStatus{
 }
 
 
+/// 矿工信息
 #[cfg_attr(feature = "std", derive(Debug, PartialEq, Eq))]
 #[derive(Encode, Decode, Clone, Default)]  // 应该是有了option就必须要实现Default
 pub struct MinerInfo<A, M, S> {
@@ -64,9 +66,8 @@ pub struct MinerInfo<A, M, S> {
 
 pub trait Trait: pallet_timestamp::Trait + system::Trait{
 
-	/// The overarching event type.
-	type PledgeAmount: Get<BalanceOf<Self>>;
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
 	type Currency1: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId> + LockableCurrency<Self::AccountId, Moment=Self::BlockNumber>;
 
 	// 一条链允许换地址的最大次数
@@ -75,21 +76,21 @@ pub trait Trait: pallet_timestamp::Trait + system::Trait{
 	type TxsMaxCount: Get<u32>;
 
 	// 解压需要的时间
-	type UnBondingDuration: Get<Self::BlockNumber>;
+	type UnBondTime: Get<Self::BlockNumber>;
 }
 
 
 decl_storage! {
 	trait Store for Module<T: Trait> as TemplateModule {
 		// Just a dummy storage item.
+
+		/// 全网所有矿工信息
 		pub AllMiners get(fn allminers): map hasher(blake2_128_concat)  T::AccountId => MinerInfo<T::AccountId, T::Moment, MinerStatus>;
 
-		// 用来临时存储查找的账户的所有地址信息
-		// (token_address, AddressStatus, tx, symbol)
+		/// 存储目前个人能用的币种地址  account_id => (token_address, AddressStatus, tx, symbol)
 		pub AddressOf get(fn address_of): map hasher(blake2_128_concat)  T::AccountId =>  Vec<(Vec<u8>, AddressStatus, Vec<u8>, Vec<u8>)>;
 
-		// AccountId, symbol => (token_address, AddressStatus, tx, symbol)
-		//  激活地址后更改状态为激活
+		/// 临时存储个人此时的币种地址  AccountId, symbol => (token_address, AddressStatus, tx, symbol)
 		pub TokenInfo: double_map hasher(blake2_128_concat) T::AccountId,  hasher(blake2_128_concat) Vec<u8> => (Vec<u8>, AddressStatus, Vec<u8>, Vec<u8>);
 
         // 设置状态位  u32表现形式1xxx.初始值为 1000,低3位分别表示 验证通过次数,验证失败次数,非正常情况返回次数, tx => 1xxx,AccountId, symbol
@@ -97,50 +98,35 @@ decl_storage! {
 		// 记录 TokenStatus 的长度,防止队列过大
 		pub TokenStatusLen: u32;
 
-		AllRegisters get(fn allregisters):  map hasher(blake2_128_concat)  Vec<u8> => T::AccountId;
+		/// 硬件id对应的账户（保证一个硬件id只能注册一次)
+		pub AllRegisters get(fn allregisters):  map hasher(blake2_128_concat)  Vec<u8> => T::AccountId;
 
-		// 已经被用来挖矿的各个链的地址
-		// 这个要求全网唯一  不可多人共用
-		// (symbol, address) => account_id
-		// todo 激活地址后insert的信息
+		/// 该币种对应的地址是否被使用 (保证全网唯一) (symbol, address) => account_id
 		pub AddressUsedForMiner get(fn address_used_for_miner): map hasher(blake2_128_concat)  (Vec<u8>, Vec<u8>) => T::AccountId;
 
-        // 每一个symbol更改地址(真正被用）的次数 用来限制用户更改地址的次数
-        // (account_id, symbol) => count
-        // 不在这个模块中更改 因为这个模块不确保可用
-        // todo 激活地址后需要 +1 信息
+        /// 记录某个账户对应币种地址的修改次数 (account_id, symbol) => count
 		pub ChangeAddressCount get(fn change_address_count): map hasher(blake2_128_concat)  (T::AccountId, Vec<u8>) => u32;
 
-		// 每一个矿工正在使用的地址
-		// 不是在这个模块添加 因为这个模块不保证可用
-		//account_id => Vec<(symbol, address)>
-		// todo 激活地址后需要append的信息
+		/// 某个矿工正在使用的币种以及地址 account_id => Vec<(symbol, address)>
 		pub PerMinerUsingAddress get(fn per_miner_using_address): map hasher(blake2_128_concat)  T::AccountId => Vec<(Vec<u8>, Vec<u8>)>;
 
-		// 黑名单  只有举报模块调用option比较好 如果没有就返回None 而不是默认值
-		// 使用
+		/// 某个账户是否进入黑名单
 		pub BlackList get(fn blacklist): map hasher(blake2_128_concat)  T::AccountId => Option<Vec<u8>>;
+
+		/// 全网矿工数
 		pub MinersCount: u64;
 
-		// 用户的下家
+		/// 用户的下家
 		pub MinerChildren get(fn miner_children): map hasher(blake2_128_concat) T::AccountId => Vec<T::AccountId>;
 
-		// ***治理参数***
-		pub PledgeAmount get(fn pledge_amount): BalanceOf<T>;
+		/// 注册抵押金额
+		pub PledgeAmount get(fn pledge_amount): BalanceOf<T> = <BalanceOf<T> as TryFrom::<u128>>::try_from(250 * DOLLARS).ok().unwrap();
 
-		pub AddressDefaultStatus get(fn address_default_status): AddressStatus;
-
-		// 所有矿工可解压的到期时间
+		/// 所有矿工可解压的到期时间
 		pub UnbondTimeOfMiners get(fn unbond_time_of_miners): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
 
 
 	}
-	add_extra_genesis {
-			config(donothing): Vec<T::AccountId>;
-			build(|config| {
-				<Module<T>>::initialize_mutable_parameter(&config.donothing);
-				})
-			}
 }
 
 
@@ -148,57 +134,58 @@ decl_error! {
 	/// Error for the elections module.
 	pub enum Error for Module<T: Trait> {
 
-		// 没有填写硬件id
+		/// 没有填写硬件id
 		HardIdIsNone,
 
-		// 已经注册（不能再注册）
+		/// 已经注册（不能再注册）
 		AlreadyRegisted,
 
-		// 被举报进入黑名单的成员（不能注册)
+		/// 被举报进入黑名单的成员（不能注册)
 		InBlackList,
 
-		// 硬件id已经被使用
+		/// 硬件id已经被使用
 		HardIdBeenUsed,
 
-		// 金额太低(不够抵押)
+		/// 不够抵押
 		BondTooLow,
 
-		// 数目溢出
+		/// 数目溢出
 		Overflow,
 
-		// 还没有注册
+		/// 还没有注册
 		NotRegister,
 
-		// 上级没有注册过矿机
+		/// 上级没有注册过矿机
 		FatherNotRegister,
 
-		// 上级是自己
+		/// 上级是自己
 		FatherIsYourself,
 
-		// vec数组为空
+		/// vec数组为空
 		VarEmpty,
 
-		// address被别人使用
+		/// address被别人使用
 		InUseAddress,
 
-		// 更改次数过多
+		/// 更改次数过多
 		ChangeTooMore,
 
-		// 该币种信息未存在
+		/// 该币种信息未存在
 		SymbolNotExists,
 
-		// tx 正在占用中,请稍后再试
+		/// tx 正在占用中,请稍后再试
 		TxInUsing,
 
-		// txsoverlimit
+		/// txsoverlimit
 		OverMaximum,
-		// 不支持的币种
+
+		/// 不支持的币种
 		UnknownSymbol,
 
-		// 没有注销过账号
+		/// 没有注销过账号
 		NotInWithdrawList,
 
-		// 没有到释放锁的时间
+		/// 没有到释放锁的时间
 		NotUnbondTime,
 	}
 }
@@ -208,17 +195,24 @@ decl_error! {
 decl_module! {
 
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		// Initializing events
-		const UnBondingDuration: T::BlockNumber = T::UnBondingDuration::get();
-		const PledgeAmount: BalanceOf<T> = T::PledgeAmount::get();
+		
+		/// 解除注册抵押金额的时间（从注销账户时候算起)
+		const UnBondTime: T::BlockNumber = T::UnBondTime::get();
 
+		/// 一个币种可以改变地址的最大次数
+		const ChangeAddressMaxCount: u32 = T::ChangeAddressMaxCount::get();
+
+		const TxsMaxCount: u32 = T::TxsMaxCount::get();
+		
 		type Error = Error<T>;
+
 		fn deposit_event() = default;
 
 
+		/// 用户注册账户
 		#[weight = 500_000]
 		pub fn register(origin, hardware_id: Vec<u8>, father_address: Option<T::AccountId>) -> DispatchResult{
-			/// register the machine.
+
 			let who = ensure_signed(origin)?;
 
 			ensure!(!(hardware_id.len() == 0), Error::<T>::HardIdIsNone);
@@ -303,13 +297,7 @@ decl_module! {
 		}
 
 
-		#[weight = 500_000]
-		fn set_default_address_status(origin, status: AddressStatus){
-			ensure_root(origin)?;
-			<AddressDefaultStatus>::put(status);
-		}
-
-
+		/// 用户注销账户
 		#[weight = 500_000 ]
 		pub fn withdraw(origin) -> DispatchResult {
 			/// 注销注册的账户 并归还抵押金额
@@ -321,8 +309,9 @@ decl_module! {
 			let now = <system::Module<T>>::block_number();
 			Self::kill_man(who.clone());
 
-			let bond :BalanceOf<T> = T::PledgeAmount::get();
-			<UnbondTimeOfMiners<T>>::insert(who.clone(), now + T::UnBondingDuration::get());
+			let bond :BalanceOf<T> = <PledgeAmount<T>>::get();
+
+			<UnbondTimeOfMiners<T>>::insert(who.clone(), now + T::UnBondTime::get());
 
 			// 归还抵押
 			Self::deposit_event(RawEvent::Withdraw(who.clone()));
@@ -330,7 +319,7 @@ decl_module! {
 		}
 
 
-		/// 自动注销账户时过一段时间自己解压
+		/// 手动解抵押(注销账户一段时间后才能操作)
 		#[weight = 500_000 ]
 		pub fn withdraw_unbonded(origin) -> DispatchResult{
 			let who = ensure_signed(origin)?;
@@ -354,31 +343,22 @@ decl_module! {
 
 
 
+		/// 用户添加对应币种的地址
 		#[weight = 500_000]
-		pub fn add_token_info(origin, symbol: Vec<u8>, tokenaddress: Vec<u8>, tx: Vec<u8>) -> DispatchResult {  // 一个symbol值有一个地址
-			/// 给注册过的用户添加token信息
+		pub fn add_token_info(origin, symbol: Vec<u8>, tokenaddress: Vec<u8>, tx: Vec<u8>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			//**********支持挖矿的币种********************
-			let btc = BTC.as_bytes().to_vec();
-			let eth = ETH.as_bytes().to_vec();
-			let usdt = USDT.as_bytes().to_vec();
-			let eos = EOS.as_bytes().to_vec();
-			let ecap = ECAP.as_bytes().to_vec();
-			//*************在这里添加********************
-
 			 match symbol{
-				_ if btc.clone() == symbol => debug::info!("add btc info"),
-				_ if usdt.clone() == symbol => debug::info!("add usdt info"),
-				_ if eth.clone() == symbol => debug::info!("add eth info"),
-				_ if eos.clone() == symbol => debug::info!("add eos info"),
-				_ if ecap.clone() == symbol => debug::info!("add ecap info"),
+				_ if BTC.as_bytes().to_vec() == symbol => debug::info!("add btc info"),
+				_ if USDT.as_bytes().to_vec() == symbol => debug::info!("add usdt info"),
+				_ if ETH.as_bytes().to_vec() == symbol => debug::info!("add eth info"),
+				_ if EOS.as_bytes().to_vec() == symbol => debug::info!("add eos info"),
+				_ if ECAP.as_bytes().to_vec() == symbol => debug::info!("add ecap info"),
 				_ => return Err(Error::<T>::UnknownSymbol)?
 			};
 
 			ensure!(!(symbol.len() == 0), Error::<T>::VarEmpty);
 			ensure!(!(tokenaddress.len()==0), Error::<T>::VarEmpty);
-			// Vec<u8>参数不能为空
 
 			ensure!(<AllMiners<T>>::contains_key(who.clone()), Error::<T>::NotRegister);
 			// 如果还没有注册， 则直接退出
@@ -389,7 +369,7 @@ decl_module! {
 			ensure!(<ChangeAddressCount<T>>::get((who.clone(), symbol.clone())) < T::ChangeAddressMaxCount::get(), Error::<T>::ChangeTooMore);
 			// 每条链的地址最多能改两次
 
-			<TokenInfo<T>>::insert(who.clone(), symbol.clone(), (tokenaddress.clone(), <AddressDefaultStatus>::get(), tx.clone(), symbol.clone()));
+			<TokenInfo<T>>::insert(who.clone(), symbol.clone(), (tokenaddress.clone(), AddressStatus::default(), tx.clone(), symbol.clone()));
 
 			// 初始化状态码
 			let curent_status = <TokenStatus<T>>::get(tx.clone()).0;
@@ -407,6 +387,7 @@ decl_module! {
 			}
 
 
+		/// 用户删除掉对应币种的地址
 		#[weight = 10000_000 ]
 		pub fn remove_token_info(origin, symbol: Vec<u8>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -457,13 +438,16 @@ decl_module! {
 		}
 
 
+		/// 设置注册抵押金额
 		#[weight = 500_000]
 		fn set_pledgeamount(origin, bond: BalanceOf<T>){
-			/// 设置注册抵押金额
+			
 			ensure_root(origin)?;
+			
 			<PledgeAmount<T>>::put(bond);
+			Self::deposit_event(RawEvent::SetPledgeAmount);
 
-	}
+		}
 
 	}
 }
@@ -480,6 +464,7 @@ decl_event!(
 		KillRegisterEvent(AccountId),
 		WithdrawUnbond(AccountId),
 		Withdraw(AccountId),
+		SetPledgeAmount, 
 	}
 );
 
@@ -533,12 +518,6 @@ impl <T: Trait> Module <T> {
 			Self::deposit_event(RawEvent::KillRegisterEvent(who.clone()));
 
 	}
-
-	fn initialize_mutable_parameter(params: &[T::AccountId]){
-		<PledgeAmount<T>>::put(T::PledgeAmount::get());
-		<AddressDefaultStatus>::put(AddressStatus::default());
-	}
-
 
 }
 

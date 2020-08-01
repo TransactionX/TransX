@@ -25,67 +25,6 @@ use sp_std::prelude::*;
 const MODULE_ID: ModuleId = ModuleId(*b"py/trsry");
 type PositiveImbalanceOf<T> = <<T as Trait>::Currency3 as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
 
-// todo 必须要限制百分比的范围
-trait BoundU64{
-	fn get_bound_param(x: u64) -> result::Result<u64, &'static str >;
-	fn set_multiple(x: u64) -> result::Result<u64, &'static str >;
-	fn get_exp(x: u64) -> result::Result<u64, &'static str >;
-}
-
-trait BoundU32{
-	fn get_bound_param(x: u32) -> result::Result<u32, &'static str>;
-}
-
-impl BoundU32 for u32{
-	fn get_bound_param(x: u32) -> Result<u32, &'static str> {
-		match x {
-			0...101 => Ok(x),
-			_ => Err("输入数目超出边界")
-		}
-	}
-}
-
-impl BoundU64 for u64{
-	fn get_bound_param(x: u64) -> Result<u64, &'static str> {
-		match x {
-			0u64...101u64 => Ok(x),
-			_ => Err("输入数目超出边界")
-		}
-	}
-
-	fn set_multiple(x: u64) -> Result<u64, &'static str>{
-		if x % 100 == 0 && x > 0 && x <= 10_0000{
-			return Ok(x);
-		}
-		else{
-			return Err("输入的倍数形式不对");
-		}
-	}
-
-	fn get_exp(x: u64) -> Result<u64, &'static str>{
-		match x {
-			11...20 => Ok(x),
-			_ => Err("指数值输入错误")
-		}
-	}
-}
-
-// 各币种的挖矿算力总和
-#[cfg_attr(feature = "std", derive())]
-#[derive(Encode, Decode, Default, Clone, Debug, PartialEq, Eq)]
-pub struct TokenTotalPower{
-	btc_amount_power: u64,
-	btc_count_power: u64,
-
-	eth_amount_power: u64,
-	eth_count_power: u64,
-
-	usdt_amount_power: u64,
-	usdt_count_power: u64,
-
-	eos_amount_power: u64,
-	eos_count_power: u64,
-}
 
 //type AccountIdOf<T> = <T as system::Trait>::AccountId;
 // 可治理的参数
@@ -801,7 +740,7 @@ impl<T: Trait> Module<T> {
 		// ***以下跟算力相关***
 
 		// 计算算力
-		let workforce = Self::calculate_count_and_amount_workforce(
+		let workforce = Self::calculate_workforce(
 			sender.clone(), block_num, symbol.clone(), mine_parm.usdt_nums.clone(), mine_tag.clone())?;
 
 		// 获取金额算力
@@ -944,7 +883,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	fn calculate_count_and_amount_workforce(
+	fn calculate_workforce(
 		who: T::AccountId, block_number: T::BlockNumber, coin_name: &'static str, mut usdt_nums: u64, mine_tag: MineTag)
 		-> result::Result<(u64, u64, u64, u64), DispatchError> {
 		/// 计算次数或是金额算力  coin_amount指本次交易以USDT计价的金额
@@ -1700,6 +1639,71 @@ impl<T: Trait> Module<T> {
 
 	}
 
+}
+
+
+// *****************************对值作限制***********************************************************
+
+// todo 必须要限制百分比的范围
+trait BoundU64{
+	fn get_bound_param(x: u64) -> result::Result<u64, &'static str >;
+	fn set_multiple(x: u64) -> result::Result<u64, &'static str >;
+	fn get_exp(x: u64) -> result::Result<u64, &'static str >;
+}
+
+trait BoundU32{
+	fn get_bound_param(x: u32) -> result::Result<u32, &'static str>;
+}
+
+impl BoundU32 for u32{
+	fn get_bound_param(x: u32) -> Result<u32, &'static str> {
+		match x {
+			0...101 => Ok(x),
+			_ => Err("输入数目超出边界")
+		}
+	}
+}
+
+impl BoundU64 for u64{
+	fn get_bound_param(x: u64) -> Result<u64, &'static str> {
+		match x {
+			0u64...101u64 => Ok(x),
+			_ => Err("输入数目超出边界")
+		}
+	}
+
+	fn set_multiple(x: u64) -> Result<u64, &'static str>{
+		if x % 100 == 0 && x > 0 && x <= 10_0000{
+			return Ok(x);
+		}
+		else{
+			return Err("输入的倍数形式不对");
+		}
+	}
+
+	fn get_exp(x: u64) -> Result<u64, &'static str>{
+		match x {
+			11...20 => Ok(x),
+			_ => Err("指数值输入错误")
+		}
+	}
+}
+
+// 各币种的挖矿算力总和
+#[cfg_attr(feature = "std", derive())]
+#[derive(Encode, Decode, Default, Clone, Debug, PartialEq, Eq)]
+pub struct TokenTotalPower{
+	btc_amount_power: u64,
+	btc_count_power: u64,
+
+	eth_amount_power: u64,
+	eth_count_power: u64,
+
+	usdt_amount_power: u64,
+	usdt_count_power: u64,
+
+	eos_amount_power: u64,
+	eos_count_power: u64,
 }
 
 

@@ -21,7 +21,7 @@ use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
 use node_runtime::{
 	GenesisConfig, BalancesConfig, SessionConfig, StakingConfig, SystemConfig,
 	GrandpaConfig, IndicesConfig, ContractsConfig, SocietyConfig, WASM_BINARY,
-	AccountId,  RegisterConfig,
+	AccountId,
 };
 use node_runtime::constants::currency::*;
 use sp_core::ChangesTrieConfiguration;
@@ -120,7 +120,6 @@ pub fn config_endowed(
 			max_members: 999,
 		}),
 		pallet_vesting: Some(Default::default()),
-		register: Some(Default::default()),
 		report: Some(Default::default()),
 		mine: Some(Default::default()),
 		generic_asset: Some(Default::default()),
