@@ -155,29 +155,13 @@ impl pallet_nicks::Trait for Runtime{
 
 }
 
-parameter_types!{
-	pub const ProposalExpire: BlockNumber = 7*DAYS;
-//	pub const VoteRewardPeriod: BlockNumber = 1 * DAYS;
-	pub const ReportReserve: Balance = 10*DOLLARS;
-	pub const ReportReward: Balance = 250*DOLLARS;
-	pub const IllegalPunishment: Balance = 500*DOLLARS;
-	pub const CouncilReward: Balance = 10*DOLLARS;
-// 	pub const Threshould: u32 = 7;
-	pub const CancelReportSlash: Balance = 1*DOLLARS;
-}
 
 impl report::Trait for Runtime {
 	type ConcilMembers = Council;
 	type ConcilCount = Council;
 	type ShouldAddOrigin = ();
 	type ShouldSubOrigin = ();
-	type CancelReportSlash = CancelReportSlash;
 	type ConcilOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-	type ProposalExpire = ProposalExpire;
-	type ReportReserve = ReportReserve;
-	type IllegalPunishment = IllegalPunishment;
-	type CouncilReward = CouncilReward;
-	type ReportReward = ReportReward;
 	type Event = Event;
 	type DeadOrigin = Balances;
 

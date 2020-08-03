@@ -18,7 +18,7 @@ use sp_runtime::traits::{
 };
 use crate::register::{AllMiners, BlackList, Trait as RegisterTrait};
 use crate::register::{self, PledgeAmount, REGISTER_ID};
-use crate::constants::time::*;
+use crate::constants::{time::*, currency::*};
 use crate::mine_linked::{MineTag};
 use crate::mine::{self, OwnerMineRecord};
 use pallet_elections_phragmen as elections_phragmen;
@@ -28,6 +28,7 @@ const MODULE_ID: ModuleId = ModuleId(*b"py/trsry");
 type BalanceOf<T> = <<T as register::Trait>::Currency1 as Currency<<T as system::Trait>::AccountId>>::Balance;
 type PositiveImbalanceOf<T> = <<T as register::Trait>::Currency1 as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
 type NegativeImbalanceOf<T> = <<T as register::Trait>::Currency1 as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
+type Balance = u128;
 
 
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
@@ -44,6 +45,25 @@ pub struct VoteInfo<Bo, A, Ba> {
 	decimals: u32,  // 精度
 	approve_mans: Vec<A>,  // 投赞成票的人
 	reject_mans: Vec<A>,  // 投反对票的人
+}
+
+
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive())]
+pub enum ReportModuleAmount<BalanceOf>{
+	ReportReserveAmount(BalanceOf),
+	ReportReward(BalanceOf),
+	PunishmentAmount(BalanceOf),
+	CouncilReward(BalanceOf),
+}
+
+
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive())]
+pub enum ReportModuleTime<BlockNumber>{
+	ProposalExpireTime(BlockNumber),
+	RewardDuration(BlockNumber),
+
 }
 
 
@@ -93,33 +113,14 @@ pub trait Trait: balances::Trait + RegisterTrait + mine::Trait{
 	type ConcilMembers: Contains<Self::AccountId>;
 
 	type ShouldAddOrigin: OnUnbalanced<PositiveImbalanceOf<Self>>;
+
 	type ShouldSubOrigin: OnUnbalanced<NegativeImbalanceOf<Self>>;
-
-	// 议案过期时间
-	type ProposalExpire: Get<Self::BlockNumber>;
-
-//	// 每隔多久集体奖励一次
-//	type VoteRewardPeriod: Get<Self::BlockNumber>;
-
-	// 举报抵押金额
-	type ReportReserve: Get<BalanceOf<Self>>;
-
-	// 举报奖励
-	type ReportReward: Get<BalanceOf<Self>>;
-
-	// 撤销举报  举报者的惩罚金额
-	type CancelReportSlash: Get<BalanceOf<Self>>;
-
-	// 对作弊者的惩罚金额
-	type IllegalPunishment: Get<BalanceOf<Self>>;
-
-	// 奖励每个投票的议员多少
-	type CouncilReward: Get<BalanceOf<Self>>;
 
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	type DeadOrigin: IsDeadAccount<Self::AccountId>;
 }
+
 
 // This module's storage items.
 decl_storage! {
@@ -134,8 +135,20 @@ decl_storage! {
 		/// 已经通过但是还没有给予奖励的投票结果
 		pub RewardList get(fn rewardlist): Vec<VoteInfo<T::BlockNumber, T::AccountId, T::Balance>>;
 
+		/// 多久统一处理投票结果
+		pub VoteRewardPeriod get(fn vote_reward_period): T::BlockNumber = T::BlockNumber::from(1 * DAYS);
 
-		pub VoteRewardPeriod get(fn vote_reward_period): T::BlockNumber;
+		/// 举报需要抵押的金额
+		pub ReportReserve get(fn report_reserve): BalanceOf<T> = <BalanceOf<T> as TryFrom::<Balance>>::try_from(10 * DOLLARS).ok().unwrap();
+
+		/// 举报奖励金额
+		pub ReportReward get(fn report_reward): BalanceOf<T> = <BalanceOf<T> as TryFrom::<Balance>>::try_from(250 * DOLLARS).ok().unwrap();
+
+		/// 对作弊者的惩罚金额
+		pub IllegalPunishment get(fn illegal_punishment): BalanceOf<T> = <BalanceOf<T> as TryFrom::<Balance>>::try_from(500 * DOLLARS).ok().unwrap();
+
+		/// 对参与投票的议会成员的奖励金额
+		pub CouncilReward get(fn council_reward): BalanceOf<T> = <BalanceOf<T> as TryFrom::<Balance>>::try_from(10 * DOLLARS).ok().unwrap();
 
 		/// 正在进行投票的举报
 		pub Voting get(fn voting): Vec<(Vec<u8>, VoteInfo<T::BlockNumber, T::AccountId, T::Balance>)>;
@@ -143,14 +156,16 @@ decl_storage! {
 		/// 进入黑名单的所有信息 被永久保存  现在用tx做key
 		pub AllPunishmentInfo get(fn allpunishmentinfo): map hasher(blake2_128_concat) Vec<u8> => VoteInfo<T::BlockNumber, T::AccountId, T::Balance>;
 
-		pub ProposalExpire get(fn proposal_expire): T::BlockNumber;
+		/// 取消举报被惩罚的金额
+		pub CancelReportSlash get(fn cancel_report_slash): BalanceOf<T> = <BalanceOf<T> as TryFrom::<Balance>>::try_from(1 * DOLLARS).ok().unwrap();
+
+		/// 提案过期时间
+		pub ProposalExpire get(fn proposal_expire): T::BlockNumber = T::BlockNumber::from(7 * DAYS);
 
 		/// 个人正在被举报的tx
 		pub BeingReportedTxsOf get(fn reported_txs_of): map hasher(blake2_128_concat) T::AccountId => BTreeSet<Vec<u8>>;
 
 	}
-
-
 
 }
 
@@ -158,47 +173,50 @@ decl_storage! {
 decl_error! {
 	/// Error for the elections module.
 	pub enum Error for Module<T: Trait> {
-		// 	在黑名单里
+		/// 在黑名单里
 		InBlackList,
 
-		// 还没有注册
+		/// 还没有注册
 		NotRegister,
 
-		// 已经被举报
+		/// 已经被举报
 		BeingReported,
 
-		// 金额太少
+		/// 金额太少
 		BondTooLow,
 
-		// 举报不存在
+		/// 举报不存在
 		ReportNotExists,
 
-		// 不是本人
+		/// 不是本人
 		NotSelf,
 
-		// 已经结束的提案
+		/// 已经结束的提案
 		PassedProposal,
 
-		// 自己是作弊方
+		/// 自己是作弊方
 		IllegalMan,
 
-		// 重复投票
+		/// 重复投票
 		RepeatVoteError,
 
-		// 不是挖矿过的tx
+		/// 不是挖矿过的tx
 		NotMinerTx,
 
+		/// 举报者或是作弊者至少一人在黑名单里
 		RepoterOrIllegalmanInBlackList,
 
-		// 不在投票列表
+		/// 不在投票列表
 		NotInVoteList,
 
-		// 在被惩罚的队列里面
+		/// 在被惩罚的队列里面
 		InPunishmentList,
 
-		// 自己是举报者不能参与投票
+		/// 自己是举报者不能参与投票
 		Reporter,
 
+		/// 未定义的amount或是时间参数)
+		Undefine,
 
 	}
 }
@@ -207,38 +225,37 @@ decl_module! {
 
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 
-//		const VoteRewardPeriod: T::BlockNumber = T::VoteRewardPeriod::get();
-		const ReportReserve: BalanceOf<T> = T::ReportReserve::get();
-		const ReportReward: BalanceOf<T> = T::ReportReward::get();
-		const CancelReportSlash: BalanceOf<T> = T::CancelReportSlash::get();
-		const IllegalPunishment: BalanceOf<T> = T::IllegalPunishment::get();
-		const CouncilReward: BalanceOf<T> = T::CouncilReward::get();
-
 		type Error = Error<T>;
 		pub fn deposit_event() = default;
 
 
-
-		/// 设置统一奖励(或是惩罚)金额的周期
+		/// 设置可治理的金额参数
 		#[weight = 500_000]
-		fn set_vote_reward_duration(origin, time: T::BlockNumber) -> DispatchResult{
-
+		fn set_amount(origin, amount: ReportModuleAmount<BalanceOf<T>>) -> DispatchResult{
 			ensure_root(origin)?;
+			match amount {
+				ReportModuleAmount::ReportReserveAmount(x) => <ReportReserve<T>>::put(x),
+				ReportModuleAmount::ReportReward(x) => <ReportReward<T>>::put(x),
+				ReportModuleAmount::PunishmentAmount(x) => <IllegalPunishment<T>>::put(x),
+				ReportModuleAmount::CouncilReward(x) => <CouncilReward<T>>::put(x),
+				_ => return Err(Error::<T>::Undefine)?,
 
-			<VoteRewardPeriod<T>>::put(time);
-
+			}
+			Self::deposit_event(RawEvent::SetAmount);
 			Ok(())
 		}
 
 
-		/// 设置投票过期时间
+		/// 设置可治理的时间参数
 		#[weight = 500_000]
-		fn set_proposal_expire_time(origin, time: T::BlockNumber) -> DispatchResult{
-
+		fn set_time(origin, time: ReportModuleTime<T::BlockNumber>) -> DispatchResult{
 			ensure_root(origin)?;
-
-			<ProposalExpire<T>>::put(time);
-
+			match time {
+				ReportModuleTime::ProposalExpireTime(x) => <ProposalExpire<T>>::put(x),
+				ReportModuleTime::RewardDuration(x) => <VoteRewardPeriod<T>>::put(x),
+				_ => return Err(Error::<T>::Undefine)?,
+			}
+			Self::deposit_event(RawEvent::SetTime);
 			Ok(())
 
 		}
@@ -280,7 +297,7 @@ decl_module! {
 			ensure!(!<AllPunishmentInfo<T>>::contains_key(tx.clone()), Error::<T>::InPunishmentList);
 
 			// 没有足够抵押资金，不给举报
-			T::Currency1::reserve(&who, T::ReportReserve::get()).map_err(|_| Error::<T>::BondTooLow)?;
+			T::Currency1::reserve(&who, <ReportReserve<T>>::get()).map_err(|_| Error::<T>::BondTooLow)?;
 
 			// 获取当前区块高度
 			let start_vote_block = <system::Module<T>>::block_number();
@@ -344,10 +361,10 @@ decl_module! {
 			Self::deposit_event(RawEvent::RemoveManTxhashs(reporter.clone(), illegalman.clone()));
 
 			// 归还举报者个人抵押
-			T::Currency1::unreserve(&reporter, T::ReportReserve::get());
+			T::Currency1::unreserve(&reporter, <ReportReserve<T>>::get());
 
 			// 惩罚举报者1个token
-			T::ShouldSubOrigin::on_unbalanced(T::Currency1::slash(&reporter, T::CancelReportSlash::get()).0);
+			T::ShouldSubOrigin::on_unbalanced(T::Currency1::slash(&reporter, <CancelReportSlash<T>>::get() ).0);
             // 从正在投票的队列中删除
 			<Voting<T>>::mutate(|votes| votes.retain(|h| h.0 != tx.clone()));
 
@@ -513,6 +530,10 @@ decl_event!(
 		RewardEvent(AccountId, Vec<u8>),
 
 		SomethingStored(u32, AccountId),
+
+		SetAmount,
+
+		SetTime,
 	}
 );
 
@@ -553,7 +574,7 @@ impl<T: Trait> Module <T> {
 		<Votes<T>>::remove(&tx);
 		// TODO 添加和删除方法均已经实现， 注意查看代码是否正确
 		// 把举报者的抵押归还
-		T::Currency1::unreserve(&reporter, T::ReportReserve::get());
+		T::Currency1::unreserve(&reporter, <ReportReserve<T>>::get());
 		// 删除相关的man thhashs信息
 		Self::remove_mantxhashs(reporter.clone(), tx.clone());
 		Self::remove_mantxhashs(illegalman.clone(), tx.clone());
@@ -577,7 +598,7 @@ impl<T: Trait> Module <T> {
 			<RewardList<T>>::mutate(|v| {
 			v.retain(|voteinfo| {
 				let is_punish = Self::vote_result(voteinfo.clone()).1;
-				let treasury_result = Self::treasury_imbalance(is_punish.clone(), voteinfo.clone());
+				let treasury_result = Self::treasury_imbalance(is_punish.clone(), voteinfo.clone(), false);
 				let sub_or_add = treasury_result.0;
 				let imbalances = treasury_result.1;
 
@@ -586,8 +607,7 @@ impl<T: Trait> Module <T> {
 					// 给国库增加金额
 					useable_balance += imbalances;
 					T::Currency1::make_free_balance_be(&treasury_id, useable_balance + T::Currency1::minimum_balance());
-					Self::everyone_balance_oprate(is_punish.clone(), voteinfo.clone());
-
+					Self::treasury_imbalance(is_punish.clone(), voteinfo.clone(), true);
 					let illegalman = voteinfo.illegal_man.clone();
 					<BeingReportedTxsOf<T>>::mutate(illegalman, |h|  h.remove(&voteinfo.tx));
 
@@ -608,7 +628,7 @@ impl<T: Trait> Module <T> {
 
 						// 彻底删掉投票信息
 						<Votes<T>>::remove(voteinfo.clone().tx);
-						Self::everyone_balance_oprate(is_punish.clone(), voteinfo.clone());
+						Self::treasury_imbalance(is_punish.clone(), voteinfo.clone(), true);
 						false
 					}
 						// 金额不够 暂时不执行
@@ -720,7 +740,7 @@ impl<T: Trait> Module <T> {
 
 	// 计算国库盈余或是亏损多少  第一个参数返回true是盈余  返回false是亏损
 	pub fn treasury_imbalance(is_punish: IsPunished, vote:
-	VoteInfo<T::BlockNumber, T::AccountId, T::Balance>) -> (TreasuryNeed, BalanceOf<T>) {
+	VoteInfo<T::BlockNumber, T::AccountId, T::Balance>, is_oprate: bool) -> (TreasuryNeed, BalanceOf<T>) {
 
 		let reporter = vote.clone().reporter;
 		let illegalman = vote.clone().illegal_man;
@@ -728,8 +748,8 @@ impl<T: Trait> Module <T> {
 		let mut negative: BalanceOf<T> = 0.into();
 		// 真的作弊
 		if is_punish == IsPunished::YES {
-			if T::Currency1::total_balance(&illegalman) >= T::IllegalPunishment::get(){
-				postive = T::IllegalPunishment::get();
+			if T::Currency1::total_balance(&illegalman) >= <IllegalPunishment<T>>::get(){
+				postive = <IllegalPunishment<T>>::get();
 			}
 			else{
 				postive = T::Currency1::total_balance(&illegalman);
@@ -738,19 +758,42 @@ impl<T: Trait> Module <T> {
 			// 奖励举报者的总金额(如果这个人已经在黑名单， 则不给奖励)
 			if !<BlackList<T>>::contains_key(reporter.clone()) {
 				// 数额巨大 不需要考虑存活问题
-				negative = T::ReportReward::get();
+				negative = <ReportReward<T>>::get();
 			}
+
+			// 如果确定进行金额操作
+			if is_oprate{
+
+				// 释放锁并且扣除金额
+				T::Currency1::remove_lock(REGISTER_ID, &illegalman);
+				T::Currency1::slash(&illegalman, <IllegalPunishment<T>>::get());
+
+				// 释放举报者的抵押金额
+				T::Currency1::unreserve(&reporter, <ReportReserve<T>>::get());
+
+				// 数额巨大 不需要考虑存活问题
+				if negative > <BalanceOf<T>>::from(0){
+					T::Currency1::deposit_creating(&reporter, <ReportReward<T>>::get());
+				}
+			}
+
 		}
 
 		// 虚假举报
 		else {
 			// 账户必须要存在(不管你是否在黑名单 均会扣除费用)
 			if !(T::DeadOrigin::is_dead_account(&reporter)){
-				if T::Currency1::total_balance(&reporter) >= T::ReportReserve::get(){
-					postive += T::ReportReserve::get().clone();
+				if T::Currency1::total_balance(&reporter) >= <ReportReserve<T>>::get(){
+					postive += <ReportReserve<T>>::get();
+					if is_oprate{
+
+					}
 				}
 				else{
 					postive += T::Currency1::total_balance(&reporter);
+				}
+				if is_oprate{
+					T::Currency1::slash_reserved(&reporter, <ReportReserve<T>>::get());
 				}
 
 			}
@@ -766,13 +809,19 @@ impl<T: Trait> Module <T> {
 				if !<BlackList<T>>::contains_key(&peaple){
 					// 如果账户还存在
 					if !(T::DeadOrigin::is_dead_account(&peaple)){
-						negative += T::CouncilReward::get().clone();
+						negative += <CouncilReward<T>>::get();
+						if is_oprate{
+							T::Currency1::deposit_creating(&peaple, <CouncilReward<T>>::get());
+						}
 					}
 
 					// 如果账户已经不存在
 					else{
-						if T::ReportReward::get() >= T::Currency1::minimum_balance(){
-							negative += T::CouncilReward::get().clone();
+						if <ReportReward<T>>::get() >= T::Currency1::minimum_balance(){
+							negative += <CouncilReward<T>>::get();
+							if is_oprate{
+								T::Currency1::deposit_creating(&peaple, <CouncilReward<T>>::get());
+							}
 						}
 					}
 				}
@@ -791,71 +840,6 @@ impl<T: Trait> Module <T> {
 	}
 
 
-	// 这个方法用来操作除了国库之外的跟此次投票有关的人员的金额
-	pub fn everyone_balance_oprate(is_punish: IsPunished,
-								   vote: VoteInfo<T::BlockNumber, T::AccountId, T::Balance>){
-
-		let reporter = vote.clone().reporter;
-		let illegalman = vote.clone().illegal_man;
-		// 真的作弊
-		if is_punish == IsPunished::YES {
-
-			// 释放锁并且扣除金额
-			T::Currency1::remove_lock(REGISTER_ID, &illegalman);
-			T::Currency1::slash(&illegalman, T::IllegalPunishment::get());
-
-			// 数额巨大 不需要考虑存活问题
-			T::Currency1::unreserve(&reporter, T::ReportReserve::get());
-
-			// 举报者如果已经在黑名单 则不给奖励
-			if !<BlackList<T>>::contains_key(&reporter){
-				T::Currency1::deposit_creating(&reporter, T::ReportReward::get());
-			}
-
-		}
-
-		// 虚假举报
-		else {
-			// 惩罚举报者的金额
-				// 账户必须要存在
-			if !(T::DeadOrigin::is_dead_account(&reporter)){
-
-				T::Currency1::slash_reserved(&reporter, T::ReportReserve::get());
-
-			}
-
-			}
-
-		// 议员总奖励金额
-		let mut all_mans =
-			vote.reject_mans.iter().chain(vote.approve_mans.iter());
-
-		for i in 0..all_mans.clone().count() {
-			if let Some(peaple) = all_mans.next() {
-				if !<BlackList<T>>::contains_key(&peaple){
-					if !(T::DeadOrigin::is_dead_account(&peaple)){
-					T::Currency1::deposit_creating(&peaple, T::CouncilReward::get());
-					}
-
-					// 如果账户已经不存在
-					else{
-						if T::ReportReward::get() >= T::Currency1::minimum_balance(){
-							T::Currency1::deposit_creating(&peaple, T::CouncilReward::get());
-						}
-					}
-				}
-
-			};
-		}
-	}
-
-
-//	fn initialize_mutable_parameter(params: &[T::AccountId]){
-//		<VoteRewardPeriod<T>>::put(T::VoteRewardPeriod::get());
-//		<ProposalExpire<T>>::put(T::ProposalExpire::get());
-//	}
-
-
 }
 
 
@@ -865,20 +849,6 @@ impl<T: Trait> ReportedTxs<T::AccountId> for Module<T>{
 	}
 }
 
-
-// ***************************************对数值进行限制*********************************************
-trait RewardPeriodBound{
-	fn get_bound_period(x: u32) -> result::Result<u32, &'static str>;
-}
-
-impl RewardPeriodBound for u32{
-	fn get_bound_period(x: u32) -> result::Result<u32, &'static str> {
-		match x {
-			0 => Err("输入非法数据0"),
-			_ => Ok(x)
-		}
-	}
-}
 
 
 
