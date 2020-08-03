@@ -1689,21 +1689,5 @@ impl BoundU64 for u64{
 	}
 }
 
-// 各币种的挖矿算力总和
-#[cfg_attr(feature = "std", derive())]
-#[derive(Encode, Decode, Default, Clone, Debug, PartialEq, Eq)]
-pub struct TokenTotalPower{
-	btc_amount_power: u64,
-	btc_count_power: u64,
-
-	eth_amount_power: u64,
-	eth_count_power: u64,
-
-	usdt_amount_power: u64,
-	usdt_count_power: u64,
-
-	eos_amount_power: u64,
-	eos_count_power: u64,
-}
 
 

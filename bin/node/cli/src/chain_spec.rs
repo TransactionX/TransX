@@ -25,7 +25,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig,
 	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
 	StakingConfig, ElectionsConfig, IndicesConfig, SocietyConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, WASM_BINARY, ReportConfig, MineConfig, TransxCommiteeConfig, GenericAssetConfig,
+	TechnicalCommitteeConfig, WASM_BINARY, MineConfig, TransxCommiteeConfig, GenericAssetConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -330,9 +330,6 @@ pub fn testnet_genesis(
 			founders: vec![hex!["8e87d1c0b7588c8038d83317ef95c2be5449f500af057a174f14b43010a61e69"].into(),] // 这个参数只是为了顺利跑代码
 		}),
 
-		report: Some(ReportConfig{
-			donothing: vec![]  // 这个参数只是为了顺利跑代码
-		}),
 
 		pallet_vesting: Some(Default::default()),
 	}

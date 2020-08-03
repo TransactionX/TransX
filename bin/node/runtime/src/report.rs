@@ -82,19 +82,6 @@ pub enum VoteResult{
 }
 
 
-trait RewardPeriodBound{
-	fn get_bound_period(x: u32) -> result::Result<u32, &'static str>;
-}
-
-impl RewardPeriodBound for u32{
-	fn get_bound_period(x: u32) -> result::Result<u32, &'static str> {
-		match x {
-			0 => Err("输入非法数据0"),
-			_ => Ok(x)
-		}
-	}
-}
-
 
 pub trait Trait: balances::Trait + RegisterTrait + mine::Trait{
 
@@ -111,8 +98,8 @@ pub trait Trait: balances::Trait + RegisterTrait + mine::Trait{
 	// 议案过期时间
 	type ProposalExpire: Get<Self::BlockNumber>;
 
-	// 每隔多久集体奖励一次
-	type VoteRewardPeriod: Get<Self::BlockNumber>;
+//	// 每隔多久集体奖励一次
+//	type VoteRewardPeriod: Get<Self::BlockNumber>;
 
 	// 举报抵押金额
 	type ReportReserve: Get<BalanceOf<Self>>;
@@ -138,21 +125,22 @@ pub trait Trait: balances::Trait + RegisterTrait + mine::Trait{
 decl_storage! {
 	trait Store for Module<T: Trait> as ReportModule {
 
-		// 所有还未奖励的投票的集合（一直到投票奖励完成才kill）
+		/// 所有还未奖励的投票的集合（一直到投票奖励完成才kill）
 		pub Votes get(fn votes): map hasher(blake2_128_concat) Vec<u8> => VoteInfo<T::BlockNumber, T::AccountId, T::Balance>;
 
-		// 所有人建立一个与自己有关的所有合法交易的tx数组， 这些数组组成一个集合
+		/// 与自己有关的所有tx
 		pub ManTxHashs get(fn mantxhashs): map hasher(blake2_128_concat) T::AccountId => Vec<Vec<u8>>;
 
-		// 已经通过但是还没有给予奖励的投票结果
+		/// 已经通过但是还没有给予奖励的投票结果
 		pub RewardList get(fn rewardlist): Vec<VoteInfo<T::BlockNumber, T::AccountId, T::Balance>>;
+
 
 		pub VoteRewardPeriod get(fn vote_reward_period): T::BlockNumber;
 
-		// 正在进行投票的举报
+		/// 正在进行投票的举报
 		pub Voting get(fn voting): Vec<(Vec<u8>, VoteInfo<T::BlockNumber, T::AccountId, T::Balance>)>;
 
-		// 进入黑名单的所有信息 被永久保存  现在用它的交易hash做key
+		/// 进入黑名单的所有信息 被永久保存  现在用tx做key
 		pub AllPunishmentInfo get(fn allpunishmentinfo): map hasher(blake2_128_concat) Vec<u8> => VoteInfo<T::BlockNumber, T::AccountId, T::Balance>;
 
 		pub ProposalExpire get(fn proposal_expire): T::BlockNumber;
@@ -162,12 +150,6 @@ decl_storage! {
 
 	}
 
-	add_extra_genesis {
-			config(donothing): Vec<T::AccountId>;
-			build(|config| {
-				<Module<T>>::initialize_mutable_parameter(&config.donothing);
-				})
-			}
 
 
 }
@@ -225,7 +207,7 @@ decl_module! {
 
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 
-		const VoteRewardPeriod: T::BlockNumber = T::VoteRewardPeriod::get();
+//		const VoteRewardPeriod: T::BlockNumber = T::VoteRewardPeriod::get();
 		const ReportReserve: BalanceOf<T> = T::ReportReserve::get();
 		const ReportReward: BalanceOf<T> = T::ReportReward::get();
 		const CancelReportSlash: BalanceOf<T> = T::CancelReportSlash::get();
@@ -237,34 +219,32 @@ decl_module! {
 
 
 
+		/// 设置统一奖励(或是惩罚)金额的周期
 		#[weight = 500_000]
-		fn set_vote_reward_period(origin, time: VoteRewardPeriodEnum) -> DispatchResult{
-			/// 改投票奖励的周期 默认是1天
+		fn set_vote_reward_duration(origin, time: T::BlockNumber) -> DispatchResult{
+
 			ensure_root(origin)?;
-			match time {
-				VoteRewardPeriodEnum::Days(x) => <VoteRewardPeriod<T>>::put(T::BlockNumber::from(u32::get_bound_period(x)?*DAYS)),
-				VoteRewardPeriodEnum::Minutes(x) => <VoteRewardPeriod<T>>::put(T::BlockNumber::from(u32::get_bound_period(x)?*MINUTES)),
-				VoteRewardPeriodEnum::Hours(x) => <VoteRewardPeriod<T>>::put(T::BlockNumber::from(u32::get_bound_period(x)?*HOURS))
-			}
+
+			<VoteRewardPeriod<T>>::put(time);
+
 			Ok(())
 		}
 
 
+		/// 设置投票过期时间
 		#[weight = 500_000]
-		fn set_proposal_expire_time(origin, time: VoteRewardPeriodEnum) -> DispatchResult{
-			/// 改投票奖励的周期 默认是1天
+		fn set_proposal_expire_time(origin, time: T::BlockNumber) -> DispatchResult{
+
 			ensure_root(origin)?;
-			match time {
-				VoteRewardPeriodEnum::Days(x) => <ProposalExpire<T>>::put(T::BlockNumber::from(u32::get_bound_period(x)?*DAYS)),
-				VoteRewardPeriodEnum::Minutes(x) => <ProposalExpire<T>>::put(T::BlockNumber::from(u32::get_bound_period(x)?*MINUTES)),
-				VoteRewardPeriodEnum::Hours(x) => <ProposalExpire<T>>::put(T::BlockNumber::from(u32::get_bound_period(x)?*HOURS))
-			}
+
+			<ProposalExpire<T>>::put(time);
+
 			Ok(())
 
 		}
 
 
-		// 举报
+		/// 举报不良的挖矿
 		#[weight = 500_000]
 		pub fn report(origin, tx: Vec<u8>, mine_tag: MineTag, reason: Vec<u8>) -> DispatchResult{
 			/// 举报不实交易
@@ -337,7 +317,7 @@ decl_module! {
 		}
 
 
-		// 取消举报
+		/// 取消举报
 		#[weight = 500_000]
 		pub fn cancel_report(origin, tx: Vec<u8>) -> DispatchResult{
 			/// 取消举报 只有该提案的举报者才有资格操作
@@ -379,7 +359,7 @@ decl_module! {
 		}
 
 
-		// 投票
+		/// 对举报提案集进行投票
 		#[weight = 500_000]
 		pub fn vote(origin, tx: Vec<u8>, yes_no: bool) -> DispatchResult{
 			/// 投票 只有议员可以操作
@@ -870,10 +850,10 @@ impl<T: Trait> Module <T> {
 	}
 
 
-	fn initialize_mutable_parameter(params: &[T::AccountId]){
-		<VoteRewardPeriod<T>>::put(T::VoteRewardPeriod::get());
-		<ProposalExpire<T>>::put(T::ProposalExpire::get());
-	}
+//	fn initialize_mutable_parameter(params: &[T::AccountId]){
+//		<VoteRewardPeriod<T>>::put(T::VoteRewardPeriod::get());
+//		<ProposalExpire<T>>::put(T::ProposalExpire::get());
+//	}
 
 
 }
@@ -885,6 +865,20 @@ impl<T: Trait> ReportedTxs<T::AccountId> for Module<T>{
 	}
 }
 
+
+// ***************************************对数值进行限制*********************************************
+trait RewardPeriodBound{
+	fn get_bound_period(x: u32) -> result::Result<u32, &'static str>;
+}
+
+impl RewardPeriodBound for u32{
+	fn get_bound_period(x: u32) -> result::Result<u32, &'static str> {
+		match x {
+			0 => Err("输入非法数据0"),
+			_ => Ok(x)
+		}
+	}
+}
 
 
 

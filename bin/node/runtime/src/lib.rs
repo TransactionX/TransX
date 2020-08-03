@@ -157,7 +157,7 @@ impl pallet_nicks::Trait for Runtime{
 
 parameter_types!{
 	pub const ProposalExpire: BlockNumber = 7*DAYS;
-	pub const VoteRewardPeriod: BlockNumber = 1 * DAYS;
+//	pub const VoteRewardPeriod: BlockNumber = 1 * DAYS;
 	pub const ReportReserve: Balance = 10*DOLLARS;
 	pub const ReportReward: Balance = 250*DOLLARS;
 	pub const IllegalPunishment: Balance = 500*DOLLARS;
@@ -172,11 +172,8 @@ impl report::Trait for Runtime {
 	type ShouldAddOrigin = ();
 	type ShouldSubOrigin = ();
 	type CancelReportSlash = CancelReportSlash;
-// 	type Thredshould = Threshould;
 	type ConcilOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-// 	type Currency0 = Balances;
 	type ProposalExpire = ProposalExpire;
-	type VoteRewardPeriod = VoteRewardPeriod;
 	type ReportReserve = ReportReserve;
 	type IllegalPunishment = IllegalPunishment;
 	type CouncilReward = CouncilReward;
@@ -1101,7 +1098,7 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Register: register::{Module, Call, Storage, Event<T>},
-		Report: report::{Module, Call, Storage, Event<T>, Config<T>},
+		Report: report::{Module, Call, Storage, Event<T>},
 		Mine: mine::{Module, Storage, Call, Event<T>, Config<T>},
 		Nicks: pallet_nicks::{Module, Call, Storage, Event<T>},
 		TransxCommitee: pallet_collective::<Instance3>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},

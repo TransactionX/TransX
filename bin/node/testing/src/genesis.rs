@@ -120,7 +120,6 @@ pub fn config_endowed(
 			max_members: 999,
 		}),
 		pallet_vesting: Some(Default::default()),
-		report: Some(Default::default()),
 		mine: Some(Default::default()),
 		generic_asset: Some(Default::default()),
 	}
