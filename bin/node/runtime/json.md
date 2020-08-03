@@ -17,6 +17,18 @@
     "eos_count_power": "u64"
   },
 
+  "ReportModuleAmount": {
+    "ReportReserveAmount": "Balance",
+    "ReportReward": "Balance",
+    "PunishmentAmount": "Balance",
+    "CouncilReward": "Balance"
+},
+
+  " ReportModuleTime": {
+    "ProposalExpireTime": "BlockNumber",
+    "RewardDuration": "BlockNumber"
+},
+
   "AssetTime": {
   "_enum": {
   "Days": "u32",
