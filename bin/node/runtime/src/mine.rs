@@ -500,6 +500,7 @@ decl_module! {
         fn deposit_event() = default;
 
 
+		/// 挖矿
 		#[weight = 50_000]
         pub fn create_mine(
         origin,mine_tag: MineTag, tx: Vec<u8>, from_address: Vec<u8>,to_address:Vec<u8>,symbol:Vec<u8>,
@@ -836,7 +837,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-    // 获取存储矿工算力信息的指示
+    /// 获取存储矿工算力信息的指示
     fn miner_power_info_point() -> (u32, u32) {
         let prev_point = <MinerPowerInfoPrevPoint>::get();
         let curr_point = match prev_point {
@@ -848,7 +849,7 @@ impl<T: Trait> Module<T> {
     }
 
 
-	// 将当日挖矿信息进行归档，不可更改地存储在网络中。
+	/// 将当日挖矿信息进行归档，不可更改地存储在网络中。
 	fn archive(block_number: T::BlockNumber) {
 
 		// 添加历史挖矿奖励信息
@@ -904,10 +905,6 @@ impl<T: Trait> Module<T> {
 					0u64 => T::ZeroDayCount::get() * <Multiple>::get(),
 					n @ _ => n,
 			};
-
-// 		// 这两个参数是相对的 一个放金额一个放次数
-//         let alpha = <Alpha>::get();
-//         let beta = Permill::from_percent(100).saturating_sub(alpha);
 
 		// 获取矿工当日算力信息
 		let token_power_of = <MinerPowerInfoStoreItem<T>>::get_miner_power_info(
@@ -1039,7 +1036,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 这里主要是金额算力  次数算力可以忽略不计
+	/// 这里主要是金额算力  次数算力可以忽略不计
 	fn is_token_power_more_than_portion(symbol: Vec<u8>) -> result::Result<bool, DispatchError>{// 参数要小写
 		/// 判断该token在全网算力是否超额
 		let mut is_too_large: bool = false;
@@ -1103,7 +1100,7 @@ impl<T: Trait> Module<T> {
 		}
 
 
-	// 把字符串的币种改成vec
+	/// 把字符串的币种改成vec
 	fn symbols_to_vec() -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>){
 		//**********支持挖矿的币种********************
 		let btc = BTC.as_bytes().to_vec();
@@ -1116,7 +1113,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 个人算力是否达到硬顶
+	/// 个人算力是否达到硬顶
 	fn is_person_power_to_max(who: T::AccountId, symbol: Vec<u8>) -> result::Result<bool, DispatchError>{
 
 		let block_number = Self::now();
@@ -1157,7 +1154,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 币种算力是否达到硬顶
+	/// 币种算力是否达到硬顶
 	fn is_token_power_to_max(symbol: Vec<u8>) -> result::Result<bool, DispatchError>{
 
 		let block_number = Self::now();
@@ -1194,14 +1191,14 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 获取当前区块高度
+	/// 获取当前区块高度
 	fn now() -> T::BlockNumber{
 		<system::Module<T>>::block_number()
 	}
 
 
+	/// 计算今天的挖矿奖励
 	fn per_day_mine_reward_token() -> BalanceOf<T>{
-		/// 计算每一天的挖矿奖励
 
 		let block_num = Self::now(); // 获取区块的高度
 
@@ -1243,8 +1240,8 @@ impl<T: Trait> Module<T> {
 	}
 
 
+	/// 计算膨胀算力
 	fn inflate_power(who: T::AccountId, mine_power: u64) -> u64{  // todo 膨胀算力在计算算力之后  把膨胀算力加入到累计算力里面
-		/// 计算膨胀算力
 		// 把这个usdt金额数值再放大到100倍  这样计算数值的时候才能最大限度的准确
 		let mut grandpa = Permill::from_percent(0);
 		let mut father = Permill::from_percent(0);
@@ -1261,9 +1258,9 @@ impl<T: Trait> Module<T> {
 	}
 
 
+	/// 计算本次挖矿每个人的奖励
 	fn calculate_reward(who: T::AccountId, thistime_reward: BalanceOf<T>)
 		-> (BalanceOf<T>, BalanceOf<T>, BalanceOf<T>, BalanceOf<T>){
-		/// 计算每一个人的奖励
 
 		let mut founders_total_reward = <BalanceOf<T>>::from(0);
 
@@ -1304,7 +1301,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 计算算力的最后一步
+	/// 计算算力的最后一步
 	fn final_work_power(who: T::AccountId, MLA: u64, mine_tag: MineTag, mut pre_power: u64, mut nums: u64, today_total_power: u64, is_amount_power: bool) -> result::Result<u64, DispatchError>{
 		// pre_power 前一天挖矿的该币种的总算力
 		// num 未做膨胀处理的金额或是次数
@@ -1424,12 +1421,11 @@ impl<T: Trait> Module<T> {
 			}
 	}
 
-	// 执行奖励操作
+	/// 执行奖励操作
 	fn reward_all_people(
 		who: T::AccountId, miner_reward: BalanceOf<T>, fa_reward: BalanceOf<T>, gr_reward: BalanceOf<T>,
 		founders_total_reward: BalanceOf<T>)
 		->  DispatchResult{
-		/// 把挖矿奖励给每一个人
 
 		let time = Self::time();
 
@@ -1466,6 +1462,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
+	/// 计算此时国库的可用余额
 	fn pot() -> BalanceOf<T> {
 		// 这个方法用于时刻保护国库账号的存活
 		T::Currency3::free_balance(&MODULE_ID.into_account())
@@ -1474,7 +1471,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 初始化昨天的挖矿算力（因为昨天的算力要作一些特殊情况的处理， 不是直接使用昨天的)
+	/// 初始化昨天的挖矿算力（因为昨天的算力要作一些特殊情况的处理， 不是直接使用昨天的)
 	fn init_yesterday_total_power(block_number: T::BlockNumber){
 		// 统计今天挖矿人数
 		let count =  <LastTimeMiners<T>>::get().len() as u64;
@@ -1534,7 +1531,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 添加并存储相应的挖矿tx记录
+	/// 添加并存储相应的挖矿tx记录
 	fn add_tx(mut mine_parm: MineParm, block_num: T::BlockNumber, sender: T::AccountId){
 		// 如果交易已经进入队列，说明正在进行第二次挖矿，挖矿次数加1
 		let tx = mine_parm.tx.clone();

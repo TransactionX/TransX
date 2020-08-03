@@ -132,7 +132,7 @@ decl_storage! {
 		/// 与自己有关的所有tx
 		pub ManTxHashs get(fn mantxhashs): map hasher(blake2_128_concat) T::AccountId => Vec<Vec<u8>>;
 
-		/// 已经通过但是还没有给予奖励的投票结果
+		/// 已经通过但是还没有处理的投票结果
 		pub RewardList get(fn rewardlist): Vec<VoteInfo<T::BlockNumber, T::AccountId, T::Balance>>;
 
 		/// 多久统一处理投票结果
@@ -229,7 +229,7 @@ decl_module! {
 		pub fn deposit_event() = default;
 
 
-		/// 设置可治理的金额参数
+		/// 设置金额有关参数
 		#[weight = 500_000]
 		fn set_amount(origin, amount: ReportModuleAmount<BalanceOf<T>>) -> DispatchResult{
 			ensure_root(origin)?;
@@ -246,7 +246,7 @@ decl_module! {
 		}
 
 
-		/// 设置可治理的时间参数
+		/// 设置时间有关参数
 		#[weight = 500_000]
 		fn set_time(origin, time: ReportModuleTime<T::BlockNumber>) -> DispatchResult{
 			ensure_root(origin)?;
@@ -264,7 +264,7 @@ decl_module! {
 		/// 举报不良的挖矿
 		#[weight = 500_000]
 		pub fn report(origin, tx: Vec<u8>, mine_tag: MineTag, reason: Vec<u8>) -> DispatchResult{
-			/// 举报不实交易
+
 			let who = ensure_signed(origin)?;
 			debug::warn!("-----report,account:{:?}------",who);
 			let tx_info = if let Some(info) = <OwnerMineRecord<T>>::get(tx.clone(), mine_tag){
@@ -337,7 +337,7 @@ decl_module! {
 		/// 取消举报
 		#[weight = 500_000]
 		pub fn cancel_report(origin, tx: Vec<u8>) -> DispatchResult{
-			/// 取消举报 只有该提案的举报者才有资格操作
+
 			let who = ensure_signed(origin)?;
 			// 交易不存在不能操作
 			ensure!(<Votes<T>>::contains_key(tx.clone()), Error::<T>::ReportNotExists);
@@ -376,10 +376,9 @@ decl_module! {
 		}
 
 
-		/// 对举报提案集进行投票
+		/// 对举报提案进行投票
 		#[weight = 500_000]
 		pub fn vote(origin, tx: Vec<u8>, yes_no: bool) -> DispatchResult{
-			/// 投票 只有议员可以操作
 
 			// 如果自己不是议会成员则不给操作
 			let who = T::ConcilOrigin::ensure_origin(origin)?;
