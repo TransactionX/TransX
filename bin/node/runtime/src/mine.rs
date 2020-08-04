@@ -12,195 +12,159 @@ use codec::{Encode, Decode};
 use crate::mine_linked::{PersonMineWorkForce,PersonMine,MineParm,PersonMineRecord, MineTag};
 use crate::register::{self,MinersCount,AllMiners, TokenInfo, AddressOf, Trait as RegisterTrait, AddressStatus};
 use crate::mine_power::{PowerInfo, MinerPowerInfo, TokenPowerInfo, PowerInfoStore, MinerPowerInfoStore, TokenPowerInfoStore};
-use node_primitives::{Count, USD, Duration, };
+use node_primitives::{Count, USD, Duration, Balance};
 use sp_std::{result, collections::btree_set::BTreeSet};
 use num_traits::float::FloatCore;
 use pallet_timestamp as timestamp;
-use crate::constants::symbol::{USDT, BTC, EOS, ETH, ECAP};
+use crate::constants::{symbol::{USDT, BTC, EOS, ETH, ECAP}, currency::*};
 
 use crate::report::{self, VoteRewardPeriodEnum, BeingReportedTxsOf};
 use crate::constants::{time::{MINUTES, DAYS, HOURS}, genesis_params::*};
 use sp_std::prelude::*;
 
 const MODULE_ID: ModuleId = ModuleId(*b"py/trsry");
+
+// 算力相对于金额或是次数的倍数（为了让计算更加精确）
+// 具体的算力数值大概也是金额与次数的Multiple倍
+const Multiple: u64 = 1_0000;
+
+// 第一年每天的奖励
+const FirstYearPerDayMineRewardToken: Balance = 2100_0000*DOLLARS/2/(SubHalfDuration as u128)/36525*100;
+
+// 4年减半
+const SubHalfDuration: u64 = 4;
+
 type PositiveImbalanceOf<T> = <<T as Trait>::Currency3 as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
+type StdResult<T> = core::result::Result<T, &'static str>;
+type BalanceOf<T> = <<T as Trait>::Currency3 as Currency<<T as system::Trait>::AccountId>>::Balance;
+type BlockNumberOf<T> = <T as system::Trait>::BlockNumber;  // u32
+type OwnerMineWorkForce<T> = PersonMineWorkForce<<T as system::Trait>::BlockNumber>;
+type OwnerWorkForceItem<T> = PersonMine<OwnedDayWorkForce<T>, <T as system::Trait>::AccountId,<T as system::Trait>::BlockNumber>;
+pub type OwnerMineRecordItem<T> = PersonMineRecord<<T as timestamp::Trait>::Moment,
+	<T as system::Trait>::BlockNumber,BalanceOf<T>, <T as system::Trait>::AccountId>;
+type PowerInfoItem<T> = PowerInfo<<T as system::Trait>::BlockNumber>;
+type TokenPowerInfoItem<T> = TokenPowerInfo<<T as system::Trait>::BlockNumber>;
+type MinerPowerInfoItem<T> = MinerPowerInfo<<T as system::Trait>::AccountId, <T as system::Trait>::BlockNumber>;
+type PowerInfoStoreItem<T> = PowerInfoStore<PowerInfoList<T>, <T as system::Trait>::BlockNumber>;
+type TokenPowerInfoStoreItem<T> = TokenPowerInfoStore<TokenPowerInfoList<T>, <T as system::Trait>::BlockNumber>;
+type MinerPowerInfoStoreItem<T> = MinerPowerInfoStore<MinerPowerInfoDict<T>, <T as system::Trait>::AccountId, <T as system::Trait>::BlockNumber>;
 
 
-//type AccountIdOf<T> = <T as system::Trait>::AccountId;
-// 可治理的参数
 #[cfg_attr(feature = "std", derive())]
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum ChangeableParam{
-	/// 钝化系数
-	Alpha(u32),
-	/// 金额算力占比
-	AmountPowerPortion(u32),
-
-	/// btc的最大算力占比
-	MPbtc(u32),
-	/// eth的最大算力占比
-	MPeth(u32),
-	/// eos的最大算力占比
-	MPeos(u32),
-	/// usdt的最大算力占比
-	MPusdt(u32),
-	MPecap(u32),
-
-	/// 创始团队分润比例
-	FoundationShareRatio(u32),
-	/// 矿工本人分润占比
-	MinerSharePortion(u32),
-	/// 上级分闰占比
-	FatherSharePortion(u32),
-	/// 上上占比
-	SuperSharePortion(u32),
-
-	LCeth(u64),
-	LAeth(u64),
-
-	LCbtc(u64),
-	LAbtc(u64),
-
-	LCeos(u64),
-	LAeos(u64),
-
-	LCusdt(u64),
-	LAusdt(u64),
-
-	LCecap(u64),
-	LAecap(u64),
-
-
-    /// 单次btc最大转账金额
-	MLAbtc(u64),
-	/// 单次usdt最大转账金额
-	MLAusdt(u64),
-	/// 单次eos最大转账金额
-	MLAeos(u64),
-	/// 单次eth最大转账金额
-	MLAeth(u64),
-
-	MLAecap(u64),
-
-
-
-
-
-	// 客户端挖矿奖励占比
-	ClientSharePortion(u64),
-	// 每天最小挖矿奖励
-// 	PerDayMinReward(Balance),
-
-	// 算力相对于金额与次数的倍数
-// 	Multiple(u64),
-
-	// 钝化用到的下降指数
-	DeclineExp(u64),
-
-	// 所有人挖矿次数硬顶
-// 	MiningMaxNum(u64),
+pub enum MLA {
+	BtcAmount(u64),
+	EthAmount(u64),
+	UsdtAmount(u64),
+	EosAmount(u64),
+	EcapAmount(u64),
 
 }
+
+
+#[cfg_attr(feature = "std", derive())]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum LA {
+	BtcAmount(u64),
+	EthAmount(u64),
+	UsdtAmount(u64),
+	EosAmount(u64),
+	EcapAmount(u64),
+
+}
+
+
+#[cfg_attr(feature = "std", derive())]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum TLA {
+	BtcAmount(u64),
+	EthAmount(u64),
+	UsdtAmount(u64),
+	EosAmount(u64),
+	EcapAmount(u64),
+
+}
+
+#[cfg_attr(feature = "std", derive())]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum LC {
+	BtcCount(u64),
+	EthCount(u64),
+	UsdtCount(u64),
+	EosCount(u64),
+	EcapCount(u64),
+
+}
+
+#[cfg_attr(feature = "std", derive())]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum TLC {
+	BtcCount(u64),
+	EthCount(u64),
+	UsdtCount(u64),
+	EosCount(u64),
+	EcapCount(u64),
+
+}
+
+
+#[cfg_attr(feature = "std", derive())]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum MR {
+	Btc(Permill),
+	Eth(Permill),
+	Usdt(Permill),
+	Eos(Permill),
+	Ecap(Permill),
+
+}
+
 
 // 继承 register 模块,方便调用register里面的 store
 pub trait Trait: balances::Trait + RegisterTrait {
 
 	type ReportedTxs: ReportedTxs<Self::AccountId>;
-	type TechMmebersOrigin: GetMembers<Self::AccountId>;  // 技术委员会成员
+
+	type TechMmebersOrigin: GetMembers<Self::AccountId>;
+
 	type ShouldAddOrigin: OnUnbalanced<PositiveImbalanceOf<Self>>;
+
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
 	type Currency3: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+
 	type MineIndex: Parameter + Member + AtLeast32Bit + Bounded + Default + Copy;
-	// 算力归档时间，到达这个时间，则将`WorkforceInfo`信息写入到链上并不再修改。
+
 	type ArchiveDuration: Get<Self::BlockNumber>;
+
 	type RemovePersonRecordDuration: Get<Self::BlockNumber>;
-
-	// 第一年挖矿每天奖励token数
-	type FirstYearPerDayMineRewardToken: Get<BalanceOf<Self>>;
-
-	// btc硬顶
-	type BTCLimitCount: Get<Count>;
-	type BTCLimitAmount: Get<USD>;
-
-	// eth硬顶
-	type ETHLimitCount: Get<Count>;
-	type ETHLimitAmount: Get<USD>;
-
-	// eos硬顶
-	type EOSLimitCount: Get<Count>;
-	type EOSLimitAmount: Get<USD>;
-
-	// ecap硬顶
-	type USDTLimitCount: Get<Count>;
-	type USDTLimitAmount: Get<USD>;
-
-	// usdt硬顶
-	type ECAPLimitCount: Get<Count>;
-	type ECAPLimitAmount: Get<USD>;
-
-	type MiningMaxNum: Get<Count>;
-
-	type BTCMaxPortion: Get<Permill>;
-	type ETHMaxPortion: Get<Permill>;
-	type EOSMaxPortion: Get<Permill>;
-	type USDTMaxPortion: Get<Permill>;
-	type ECAPMaxPortion: Get<Permill>;
-
-	// 单次转账金额硬顶
-	type MLAbtc: Get<USD>;
-	type MLAusdt: Get<USD>;
-	type MLAeos: Get<USD>;
-	type MLAeth: Get<USD>;
-	type MLAecap: Get<USD>;
-
-	// 个人算力硬顶
-	type LAbtc: Get<USD>;
-	type LCbtc: Get<Count>;
-
-	type LAeth: Get<USD>;
-	type LCeth: Get<Count>;
-
-	type LAusdt: Get<USD>;
-	type LCusdt: Get<Count>;
-
-	type LAeos: Get<USD>;
-	type LCeos: Get<Count>;
-
-	type LAecap: Get<USD>;
-	type LCecap: Get<Count>;
 
 	// 上级和上上级的膨胀算力占比
 	type SuperiorInflationRatio: Get<Permill>;
+
 	type FatherInflationRatio: Get<Permill>;
 
-	type SubHalfDuration: Get<Duration>;  // 减半周期
-
-	// 这个参数目前已经丢弃
-	type Alpha: Get<Permill>;  // 钝化系数  0.3就直接写30  0.5是50
-
-	type AmountPowerPortionRatio: Get<Permill>; // 金额算力在总算力中的占比系数 一般是0.5（写50）
+	type AR: Get<Permill>;
 
 	// 创始团队成员的分润占比（20% 写20； 25% 写25；以此类推）
-	type FoundationShareRatio: Get<u32>;
+	type FoundationShareRatio: Get<Permill>;
 
 	// ***注意 下面的值不是占比 占比在相应方法中计算  如果矿工是100， 上级是50， 上上级是25， 那么
 	// 矿工的分润比就是 100 / （100 + 50 + 25）
 	// 矿工奖励部分
 	type MinerSharePortion: Get<u32>;
+
 	// 上级的奖励部分
 	type FatherSharePortion: Get<u32>;
+
 	// 上上级的奖励部分
 	type SuperSharePortion: Get<u32>;
 
 	// 客户端挖矿算力占比
-	//***客户端挖矿与钱包挖矿是对应的 客户端如果是20 那么钱包是80
-	type ClientWorkPowerRatio: Get<u64>;
+	type ClientRatio: Get<Permill>;
 
 	// 单日全网最低的奖励数量
 	type PerDayMinReward: Get<BalanceOf<Self>>;
-
-	// 算力相对于金额与次数的倍数
-	type Multiple: Get<u64>;
 
 	// 默认金额
 	type ZeroDayAmount: Get<u64>;
@@ -208,32 +172,9 @@ pub trait Trait: balances::Trait + RegisterTrait {
 	// 默认次数
 	type ZeroDayCount: Get<u64>;
 
-	// 钝化用到的下降指数 1.5就写15  1.2就写12
 	type DeclineExp: Get<u64>;
 
-
 }
-
-type StdResult<T> = core::result::Result<T, &'static str>;
-type BalanceOf<T> = <<T as Trait>::Currency3 as Currency<<T as system::Trait>::AccountId>>::Balance;
-
-type BlockNumberOf<T> = <T as system::Trait>::BlockNumber;  // u32
-
-type OwnerMineWorkForce<T> = PersonMineWorkForce<<T as system::Trait>::BlockNumber>;
-
-// 对应 linked_item里面的函数, 用于操作 PersonMineWorkForce 结构体
-type OwnerWorkForceItem<T> = PersonMine<OwnedDayWorkForce<T>, <T as system::Trait>::AccountId,<T as system::Trait>::BlockNumber>;
-
-// 只是结构体
-pub type OwnerMineRecordItem<T> = PersonMineRecord<<T as timestamp::Trait>::Moment,
-	<T as system::Trait>::BlockNumber,BalanceOf<T>, <T as system::Trait>::AccountId>;
-
-type PowerInfoItem<T> = PowerInfo<<T as system::Trait>::BlockNumber>;
-type TokenPowerInfoItem<T> = TokenPowerInfo<<T as system::Trait>::BlockNumber>;
-type MinerPowerInfoItem<T> = MinerPowerInfo<<T as system::Trait>::AccountId, <T as system::Trait>::BlockNumber>;
-type PowerInfoStoreItem<T> = PowerInfoStore<PowerInfoList<T>, <T as system::Trait>::BlockNumber>;
-type TokenPowerInfoStoreItem<T> = TokenPowerInfoStore<TokenPowerInfoList<T>, <T as system::Trait>::BlockNumber>;
-type MinerPowerInfoStoreItem<T> = MinerPowerInfoStore<MinerPowerInfoDict<T>, <T as system::Trait>::AccountId, <T as system::Trait>::BlockNumber>;
 
 
 
@@ -256,124 +197,142 @@ decl_event!(
 
 decl_storage! {
     trait Store for Module<T: Trait> as MineStorage {
-    	// 算力相关的
-    	DayWorkForce get(fn day_workforce): map hasher(blake2_128_concat) u64 => u64 ;    // 时间戳作为key,算力作为value.每天的平均算力
-    	AvgWorkForce get(fn avg_workforce): u64;    // 以前所有天的平均算力
 
-    	//以下针对单个用户
-    	pub OwnerMineRecord get(fn mine_record): double_map hasher(blake2_128_concat) Vec<u8>, hasher(blake2_128_concat) MineTag => Option<OwnerMineRecordItem<T>>;// 挖矿记录, key:"tx hash"的字节码
+    	/// tx与minetype作为key对应的挖矿记录
+    	pub OwnerMineRecord get(fn mine_record): double_map hasher(blake2_128_concat) Vec<u8>, hasher(blake2_128_concat) MineTag => Option<OwnerMineRecordItem<T>>;
 
-        // u32表现形式1xxx.初始值为 1000,低3位分别表示 验证通过次数,验证失败次数,验证次数.可迭代
-        // 设置状态位  u32表现形式1xxx.初始值为 1000,低3位分别表示 验证通过次数,验证失败次数,非正常情况返回次数, tx => 1xxx,AccountId, symbol
+        /// 设置状态位  u32表现形式1xxx.初始值为 1000,低3位分别表示 验证通过次数,验证失败次数,非正常情况返回次数, tx => 1xxx,AccountId, symbol
 		pub TxVerifyMap get(fn tx_verify_map): map hasher(blake2_128_concat) (Vec<u8>,MineTag) => u64;
-		pub LenOfTxVerify : u32;  // 记录 TxVerifyMap 的长度
 
-    	/// linked OwnerWorkForceItem,个人数据每天汇总
+		/// 记录 TxVerifyMap 的长度
+		pub LenOfTxVerify : u32;
+
+    	/// 个人挖矿数据每天汇总
     	OwnedDayWorkForce get(fn person_workforce): map  hasher(blake2_128_concat) (T::AccountId,BlockNumberOf<T>) => Option<OwnerMineWorkForce<T>>;
-    	OwnedMineIndex: map hasher(blake2_128_concat) (T::AccountId,BlockNumberOf<T>) => u64;        // 用户每天挖矿次数
 
-    	// `PowerInfoList`存储每日的全网算力信息，key为`ChainRunDays`，value为`PowerInfo`。
-        // 当key为`ChainRunDays`时，表示获取当日的全网算力，key=[1..`ChainRunDays`-1]获取历史的算力信息。
-        // 当每日结束时，`ChainRunDays`+1，开始存储计算下一个日期的算力信息。
+    	/// 矿工每天挖矿次数
+    	OwnedMineIndex: map hasher(blake2_128_concat) (T::AccountId,BlockNumberOf<T>) => u64;
+
+		/// 全网挖矿总和数据
         PowerInfoList get(fn power_info): map hasher(blake2_128_concat) u32 => Option<PowerInfoItem<T>>;
 
-        // `TokenPowerInfoList`存储每日的Token交易信息，与`PowerInfoList`类似。
+        /// 有关币种的挖矿数据汇总
         TokenPowerInfoList get(fn token_power_info): map hasher(blake2_128_concat) u32 => Option<TokenPowerInfoItem<T>>;
 
-		// `MinerPowerInfoDict`存储每个矿工当日与前一日的挖矿算力信息。第一个参数与MinerPowerInfoPrevPoint相关。
+		/// 个人挖矿的详细汇总(具体到每个币种)
         MinerPowerInfoDict get(fn miner_power_info): double_map  hasher(blake2_128_concat) u32, hasher(blake2_128_concat) T::AccountId => Option<MinerPowerInfoItem<T>>;
 
         // `MinerPowerInfoPrevPoint`用来区分存储前一天矿工算力信息的。
         // = 0，表示第一天挖矿，矿工还不存在前一日算力信息。
         // = 1，表示前一天挖矿信息保存在`MinerPowerInfoDict(1, AccountId)`中。
         // = 2，表示前一天挖矿信息保存在`MinerPowerInfoDict(2, AccountId)`中。
+        /// 汇总数据的指针
         MinerPowerInfoPrevPoint: u32;
 
-		// id与交易天数的映射
+		/// 矿工挖矿的日期记录
 		MinerDays get(fn minertxdays): map hasher(blake2_128_concat) T::AccountId => Vec<T::BlockNumber>;
 
-		// 个人所有天数的交易hash（未清除）
+		/// 个人挖矿的所有tx
 		MinerAllDaysTx get(fn mineralldaystx): double_map hasher(blake2_128_concat) T::AccountId, hasher(blake2_128_concat) T::BlockNumber => Vec<Vec<u8>>;
 
+		/// 币种btc的最大算力占比
+		MRbtc get(fn btc_max_portion): Permill;
+		/// 币种eth的最大算力占比
+		MReth get(fn eth_max_portion): Permill;
+		/// 币种eos的最大算力占比
+		MReos get(fn eos_max_portion): Permill;
+		/// 币种usdt的最大算力占比
+		MRusdt get(fn usdt_max_portion): Permill;
+		/// 币种ecap的最大算力占比
+		MRecap get(fn ecap_max_portion): Permill;
 
-		//********************治理参数********************
-		// 钝化系数
-
-		Alpha get(fn alpha): Permill;
-
-		AmountPowerPortionRatio get(fn amountpowerportionratio): Permill;
-
-		// 各个币允许的最大算力占比
-		BTCMaxPortion get(fn btc_max_portion): Permill;
-		ETHMaxPortion get(fn eth_max_portion): Permill;
-		EOSMaxPortion get(fn eos_max_portion): Permill;
-		USDTMaxPortion get(fn usdt_max_portion): Permill;
-		ECAPMaxPortion get(fn ecap_max_portion): Permill;
-
-		// 创始团队的奖励占比
-		FoundationShareRatio get(fn foundation_share_ratio): u32;
-		// 矿工的奖励部分
+		/// 矿工的奖励部分
 		MinerSharePortion get(fn miner_share_portion): u32;
-		// 上级的奖励部分
+		/// 上级的奖励部分
 		FatherSharePortion get(fn father_share_portion): u32;
-		// 上上级的奖励部分
+		/// 上上级的奖励部分
 		SuperSharePortion get(fn super_share_portion): u32;
 
-		// 各种币的硬顶
-		ETHLimitCount get(fn eth_limit_count): Count;
-		ETHLimitAmount get(fn eth_limit_amount): USD;
+		/// 币种eth的次数算力硬顶
+		TLCeth get(fn eth_limit_count): Count;
+		/// 币种btc的次数算力硬顶
+		TLCbtc get(fn btc_limit_count): Count;
+		/// 币种usdt的次数算力硬顶
+		TLCusdt get(fn usdt_limit_count): Count;
+		/// 币种ecap的次数算力硬顶
+		TLCecap get(fn ecap_limit_count): Count;
+		/// 币种eos的次数算力硬顶
+		TLCeos get(fn eos_limit_count): Count;
 
-		BTCLimitCount get(fn btc_limit_count): Count;
-		BTCLimitAmount get(fn btc_limit_amount): USD;
+		/// 币种btc的金额算力硬顶
+		TLAbtc get(fn btc_limit_amount): USD;
+		/// 币种eth的金额算力硬顶
+		TLAeth get(fn eth_limit_amount): USD;
+		/// 币种eos的金额算力硬顶
+		TLAeos get(fn eos_limit_amount): USD;
+		/// 币种usdt的金额算力硬顶
+		TLAusdt get(fn usdt_limit_amount): USD;
+		/// 币种ecap的金额算力硬顶
+		TLAecap get(fn ecap_limit_amount): USD;
 
-		EOSLimitCount get(fn eos_limit_count): Count;
-		EOSLimitAmount get(fn eos_limit_amount): USD;
-
-		USDTLimitCount get(fn usdt_limit_count): Count;
-		USDTLimitAmount get(fn usdt_limit_amount): USD;
-
-		ECAPLimitCount get(fn ecap_limit_count): Count;
-		ECAPLimitAmount get(fn ecap_limit_amount): USD;
-
-		// 单次转账金额硬顶
+		/// btc单次转账的金额硬顶
 		MLAbtc get(fn mla_btc): USD;
+		/// usdt单次转账的金额硬顶
 		MLAusdt get(fn mla_usdt): USD;
+		/// eos单次转账的金额硬顶
 		MLAeos get(fn mla_eos): USD;
+		/// eth单次转账的金额硬顶
 		MLAeth get(fn mla_eth): USD;
+		/// ecap单次转账的金额硬顶
 		MLAecap get(fn mla_ecap): USD;
 
-		// 客户端挖矿占比
-		ClientWorkPowerRatio get(fn client_work_power_ratio): u64;
-
-		// 全网每天最少的挖矿奖励
-		PerDayMinReward get(fn per_day_reward): BalanceOf<T>;
-
-		// 算力相对于金额或是次数的倍数（为了让计算更加精确）
-		Multiple get(fn multiple): u64;
-
-		DeclineExp get(fn decline_exp): u64;
-		// 本周期的奖励总数
+		/// 本周期的奖励总金额
 		ThisArchiveDurationTotalReward get(fn this_duration_reward): BalanceOf<T>;
 
-		// 历史挖矿奖励总数
+		/// 目前为止全网挖矿奖励总金额
 		HistoryTotalReward get(fn history_total_reward): BalanceOf<T>;
 
-		// 历史所有周期以及对应的总奖励
+		/// 历史所有周期以及对应的总奖励
 		HistorySpecificReward get(fn history_specific_reward): Vec<(u32, BalanceOf<T>)>;
 
-		MineReward get(fn mine_reward): (BalanceOf<T>, BalanceOf<T>, BalanceOf<T>, BalanceOf<T>);
-
+		/// 个人当天挖矿次数硬顶
 		MiningMaxNum get(fn mining_max_num): u64;
 
-		// 上个周期挖矿的所有矿工
+		/// 个人btc当天挖矿金额算力硬顶
+		LAbtc get(fn la_btc): u64;
+		/// 个人eth当天挖矿金额算力硬顶
+		LAeth get(fn la_eth): u64;
+		/// 个人usdt当天挖矿金额算力硬顶
+		LAusdt get(fn la_usdt): u64;
+		/// 个人eos当天挖矿金额算力硬顶
+		LAeos get(fn la_eos): u64;
+		/// 个人ecap当天挖矿金额算力硬顶
+		LAecap get(fn la_ecap): u64;
+
+		/// 个人btc当天挖矿次数算力硬顶
+		LCbtc get(fn lc_btc): u64;
+		/// 个人eth当天挖矿次数算力硬顶
+		LCeth get(fn lc_eth): u64;
+		/// 个人usdt当天挖矿次数算力硬顶
+		LCusdt get(fn lc_usdt): u64;
+		/// 个人eos当天挖矿次数算力硬顶
+		LCeos get(fn lc_eos): u64;
+		/// 个人ecap当天挖矿次数算力硬顶
+		LCecap get(fn lc_ecap): u64;
+
+		/// 创始人
+		Founders get(fn founders): Vec<T::AccountId>;
+
+		/// 上个周期挖矿的所有矿工
 		LastTimeMiners get(fn last_time_miners): BTreeSet<T::AccountId>;
 
-		// 上次挖矿的金额算力与参与挖矿的矿工数（不为0的那次）
+		/// 上次挖矿的金额算力与参与挖矿的矿工数（不为0的那次）
 		LastTotolAmountPowerAndMinersCount get(fn last_total_amount_power_and_miners_count): (u64, u64);
-		// 上次挖矿的次数算力与参与挖矿的矿工数（不为0的那次）
+
+		/// 上次挖矿的次数算力与参与挖矿的矿工数（不为0的那次）
 		LastTotolCountPowerAndMinersCount get(fn last_total_count_power_and_miners_count): (u64, u64);
 
-		// account_id => (历史总金额， 最近一次的金额， 最后一次的时间)
+		/// 个人挖矿奖励记录  (历史总金额， 最近一次的金额， 最后一次的时间)
 		CommissionAmount get(fn commission_amount): map hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, BalanceOf<T>, T::Moment);
 
 		// todo 测试专用
@@ -391,8 +350,7 @@ decl_storage! {
 
 		MinerCount get(fn miner_count): u64;
 		PowerTest get(fn power_test): (u64, u64, u64, u64);
-
-		Founders get(fn founders): Vec<T::AccountId>;
+		MineReward get(fn mine_reward): (BalanceOf<T>, BalanceOf<T>, BalanceOf<T>, BalanceOf<T>);
 
 	}
 
@@ -400,9 +358,8 @@ decl_storage! {
 
 			config(founders): Vec<T::AccountId>;
 			build(|config| {
-				// 初始化治理参数
-
-				<Module<T>>::initialize_mutable_parameter(&config.founders);
+				// 初始化创始人
+				<Module<T>>::initialize_founders(&config.founders);
 
 				})
 			}
@@ -411,64 +368,69 @@ decl_storage! {
 decl_error! {
 	/// Error for the elections module.
 	pub enum Error for Module<T: Trait> {
-		// 不是注册过的
+
+		/// 不是注册过的
 		NotRegister,
 
-		// 不存在这个参数
+		/// 不存在这个参数
 		NotExistsParam,
 
-		// 范围错误
+		/// 范围错误
 		BoundError,
 
-		// 金额输入错误
+		/// 金额输入错误
 		AmountError,
 
-		// 不是本人的挖矿地址
+		/// 不是本人的挖矿地址
 		NotYourTokenAddress,
 
-		// 挖矿地址没有被激活
+		/// 挖矿地址没有被激活
 		InActiveAddress,
 
-		// 金额太少
+		/// 金额太少
 		BondTooLow,
 
-		// 自己的交易（自己转账给自己
+		/// 自己的交易（自己转账给自己
 		TransferToYourself,
 
-		// 数目溢出
+		/// 数目溢出
 		Overfolw,
 
-		// 这个tx正在被使用（已经进入挖矿）
+		/// 这个tx正在被使用（已经进入挖矿）
 		InUseTx,
 
-		// 超过自己的配额比例
+		/// 超过自己的配额比例
 		MoreThanProportion,
 
-		// 挖矿次数过多
+		/// 挖矿次数过多
 		MineCountTooMore,
 
-		// 金额或是算力达到最大
+		/// 金额或是算力达到最大
 		AmountOrCountToMax,
 
-		// 未知的币种
+		/// 未知的币种
 		UnknownSymbol,
 
-		// MLA 设置太大
+		/// MLA 设置太大
 		MLAError,
 
-		// txsoverlimit
+		/// txsoverlimit
 		OverMaximum,
 
+		/// usdt金额太小
 		AmountTooLow,
 
-		//tx正在占用中,请稍后再试
+		/// tx正在占用中,请稍后再试
 		TxInUsing,
 
-		// 正在举报队列中
+		/// 正在举报队列中
 		BeingReported,
 
-		// 未知类型挖矿
+		/// 未知类型挖矿
 		UnknownMineType,
+
+		/// 输入了空值
+		EmptyParam,
 
 	}
 }
@@ -476,15 +438,17 @@ decl_error! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 
+		/// 多久归档算力一次
     	const ArchiveDuration: T::BlockNumber = T::ArchiveDuration::get();
+
+    	/// 最多保留多长时间的数据
     	const RemovePersonRecordDuration: T::BlockNumber = T::RemovePersonRecordDuration::get();
-    	const FirstYearPerDayMineRewardToken: BalanceOf<T> = T::FirstYearPerDayMineRewardToken::get();
 
     	/// 金额算力的奖励占比
-    	const AmountPowerPortionRatio: Permill = T::AmountPowerPortionRatio::get();
+    	const AR: Permill = T::AR::get();
 
     	/// 客户端挖矿的奖励占比
-    	const ClientWorkPowerRatio: u64 = T::ClientWorkPowerRatio::get();
+    	const ClientRatio: Permill = T::ClientRatio::get();
 
     	/// 单日全网最低的奖励金额
 		const PerDayMinReward: BalanceOf<T> = T::PerDayMinReward::get();
@@ -493,11 +457,138 @@ decl_module! {
     	const DeclineExp: u64 = T::DeclineExp::get();
 
     	/// 创始团队成员的分润比例
-    	const FoundationShareRatio: u32 = T::FoundationShareRatio::get();
+    	const FoundationShareRatio: Permill = T::FoundationShareRatio::get();
 
 
     	type Error = Error<T>;
         fn deposit_event() = default;
+
+
+        /// 设置创始人 (原则上给一个账号就可以，用于接收挖矿奖励)
+		#[weight = 50_000]
+		fn set_founders(origin, who: Vec<T::AccountId>) -> DispatchResult {
+			ensure_root(origin)?;
+			// 输入的值不能为空
+			ensure!(who.len() != 0, Error::<T>::EmptyParam);
+			<Founders<T>>::put(who);
+			Ok(())
+
+		}
+
+
+		/// 设置个人最大的挖矿次数
+		#[weight = 50_000]
+		fn set_max_mine_count(origin, count: u64) -> DispatchResult {
+			ensure_root(origin)?;
+			<MiningMaxNum>::put(count);
+			Ok(())
+
+		}
+
+
+		/// 设置单次转账金额硬顶
+		#[weight = 50_000]
+		fn set_mla(origin, amount: MLA) -> DispatchResult {
+			ensure_root(origin)?;
+			match amount {
+				MLA::BtcAmount(x) => <MLAbtc>::put(x),
+				MLA::UsdtAmount(x) => <MLAusdt>::put(x),
+				MLA::EosAmount(x) => <MLAeos>::put(x),
+				MLA::EthAmount(x) => <MLAeth>::put(x),
+				MLA::EcapAmount(x) => <MLAecap>::put(x),
+				_ => return Err(Error::<T>::UnknownSymbol)?,
+			}
+
+			Ok(())
+		}
+
+
+		/// 设置个人当天的金额算力硬顶
+		#[weight = 50_000]
+		fn set_la(origin, amount: LA) -> DispatchResult {
+			ensure_root(origin)?;
+			match amount {
+				LA::BtcAmount(x) => <LAbtc>::put(x),
+				LA::UsdtAmount(x) => <LAusdt>::put(x),
+				LA::EosAmount(x) => <LAeos>::put(x),
+				LA::EthAmount(x) => <LAeth>::put(x),
+				LA::EcapAmount(x) => <LAecap>::put(x),
+				_ => return Err(Error::<T>::UnknownSymbol)?,
+			}
+
+			Ok(())
+
+		}
+
+
+		/// 设置个人当天的次数算力硬顶
+		#[weight = 50_000]
+		fn set_lc(origin, count: LC) -> DispatchResult {
+			ensure_root(origin)?;
+			match count {
+				LC::BtcCount(x) => <LCbtc>::put(x),
+				LC::EthCount(x) => <LCeth>::put(x),
+				LC::UsdtCount(x) => <LCusdt>::put(x),
+				LC::EosCount(x) => <LCeos>::put(x),
+				LC::EcapCount(x) => <LCecap>::put(x),
+				_ => return Err(Error::<T>::UnknownSymbol)?,
+
+			}
+
+			Ok(())
+		}
+
+
+		/// 设置某个币种的次数算力硬顶(不针对个人,针对币种)
+		#[weight = 50_000]
+		fn set_tlc(origin, count: TLC) -> DispatchResult {
+			ensure_root(origin)?;
+			match count {
+				TLC::BtcCount(x) => <TLCbtc>::put(x),
+				TLC::EthCount(x) => <TLCeth>::put(x),
+				TLC::UsdtCount(x) => <TLCusdt>::put(x),
+				TLC::EosCount(x) => <TLCeos>::put(x),
+				TLC::EcapCount(x) => <TLCecap>::put(x),
+				_ => return Err(Error::<T>::UnknownSymbol)?,
+
+			}
+
+			Ok(())
+		}
+
+
+		/// 设置某个币种的金额算力硬顶(不针对个人,针对币种)
+		#[weight = 50_000]
+		fn set_tla(origin, amount: TLA) -> DispatchResult {
+			ensure_root(origin)?;
+			match amount {
+				TLA::BtcAmount(x) => <TLAbtc>::put(x),
+				TLA::UsdtAmount(x) => <TLAusdt>::put(x),
+				TLA::EosAmount(x) => <TLAeos>::put(x),
+				TLA::EthAmount(x) => <TLAeth>::put(x),
+				TLA::EcapAmount(x) => <TLAecap>::put(x),
+				_ => return Err(Error::<T>::UnknownSymbol)?,
+			}
+
+			Ok(())
+
+		}
+
+
+		/// 设置币种的最大算力占比
+		#[weight = 50_000]
+		fn set_mr(origin, percent: MR) -> DispatchResult {
+			ensure_root(origin)?;
+			match percent {
+				MR::Btc(x) => <MRbtc>::put(x),
+				MR::Eth(x) => <MReth>::put(x),
+				MR::Eos(x) => <MReos>::put(x),
+				MR::Usdt(x) => <MRusdt>::put(x),
+				MR::Ecap(x) => <MRecap>::put(x),
+				_ => return Err(Error::<T>::UnknownSymbol)?,
+			}
+			Ok(())
+		}
 
 
 		/// 挖矿
@@ -628,59 +719,6 @@ decl_module! {
 			Ok(())
         }
 
-
-		#[weight = 50_000]
-        fn set_changeable_param(origin, param: ChangeableParam) -> DispatchResult{
-        	ensure_root(origin)?;
-        	match param {
-
-        	ChangeableParam::Alpha(x) => <Alpha>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-        	ChangeableParam::AmountPowerPortion(x) => <AmountPowerPortionRatio>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-
-        	ChangeableParam::MPbtc(x) => <BTCMaxPortion>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-        	ChangeableParam::MPeth(x) => <ETHMaxPortion>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-        	ChangeableParam::MPeos(x) => <EOSMaxPortion>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-        	ChangeableParam::MPusdt(x) => <USDTMaxPortion>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-			ChangeableParam::MPecap(x) => <ECAPMaxPortion>::put(Permill::from_percent(u32::get_bound_param(x)?)),
-
-        	ChangeableParam::FoundationShareRatio(x) => <FoundationShareRatio>::put(u32::get_bound_param(x)?),
-        	ChangeableParam::MinerSharePortion(x) => <MinerSharePortion>::put(x),
-        	ChangeableParam::FatherSharePortion(x) => <FatherSharePortion>::put(x),
-        	ChangeableParam::SuperSharePortion(x) => <SuperSharePortion>::put(x),
-
-        	ChangeableParam::LCeth(x) => <ETHLimitCount>::put(x),
-        	ChangeableParam::LAeth(x) => <ETHLimitAmount>::put(x),
-
-        	ChangeableParam::LCbtc(x) => <BTCLimitCount>::put(x),
-        	ChangeableParam::LAbtc(x) => <BTCLimitAmount>::put(x),
-        	ChangeableParam::LCeos(x) => <EOSLimitCount>::put(x),
-        	ChangeableParam::LAeos(x) => <EOSLimitAmount>::put(x),
-        	ChangeableParam::LCusdt(x) => <USDTLimitCount>::put(x),
-        	ChangeableParam::LAusdt(x) => <USDTLimitAmount>::put(x),
-
-        	ChangeableParam::LCecap(x) => <ECAPLimitCount>::put(x),
-        	ChangeableParam::LAecap(x) => <ECAPLimitAmount>::put(x),
-
-        	ChangeableParam::MLAbtc(x) => <MLAbtc>::put(x),
-        	ChangeableParam::MLAusdt(x) => <MLAusdt>::put(x),
-        	ChangeableParam::MLAeos(x) => <MLAeos>::put(x),
-        	ChangeableParam::MLAeth(x) => <MLAeth>::put(x),
-        	ChangeableParam::MLAecap(x) => <MLAecap>::put(x),
-
-        	ChangeableParam::ClientSharePortion(x) => <ClientWorkPowerRatio>::put(u64::get_bound_param(x)?),
-//         	ChangeableParam::PerDayMinReward(x) => <PerDayMinReward<T>>::put(x),
-
-			// todo 测试阶段保留
-//         	ChangeableParam::Multiple(x) => <Multiple>::put(u64::set_multiple(x)?),
-
-        	ChangeableParam::DeclineExp(x) => <DeclineExp>::put(u64::get_exp(x)?),
-
-//         	ChangeableParam::MiningMaxNum(x) => <MiningMaxNum>::put(x),
-
-        	}
-        	Self::deposit_event(RawEvent::SetChangeableParam);
-        	Ok(())
-        	}
 
 		fn on_finalize(block_number: T::BlockNumber) {
 
@@ -897,12 +935,12 @@ impl<T: Trait> Module<T> {
 
 		// 获取昨天的总金额算力
 		let prev_total_amount = match <LastTotolAmountPowerAndMinersCount>::get().0 {
-					0u64 => T::ZeroDayAmount::get() * <Multiple>::get(),
+					0u64 => T::ZeroDayAmount::get() * Multiple,
 					n @ _ => n,
 			};
 		// 获取昨天的总次数算力
 		let prev_total_count = match <LastTotolCountPowerAndMinersCount>::get().0{
-					0u64 => T::ZeroDayCount::get() * <Multiple>::get(),
+					0u64 => T::ZeroDayCount::get() * Multiple,
 					n @ _ => n,
 			};
 
@@ -968,12 +1006,13 @@ impl<T: Trait> Module<T> {
 	}
 
 
+	/// 计算总算力占比
 	fn calculate_workforce_ratio(
 		amount_workforce: u64, count_workforce: u64, pre_amount_workfore: u64, pre_count_workforce: u64)
 		-> u64{
-		// 计算总算力占比
 
-		let a_sr = <AmountPowerPortionRatio>::get() ;  // 金额奖励占比
+
+		let a_sr = T::AR::get() ;  // 金额奖励占比
 		let c_sr= Permill::from_percent(100).saturating_sub(a_sr);  // 次数奖励占比
 
 		let decimal = 100_0000_0000u64;
@@ -987,8 +1026,9 @@ impl<T: Trait> Module<T> {
 	}
 
 
+	/// 删除过期记录
 	fn remove_expire_record(who: T::AccountId, is_remove_all: bool) {
-		/// 删除过期记录
+
 		let block_num = Self::now(); // 获取区块的高度
 		let now = block_num / T::ArchiveDuration::get();
 
@@ -1014,8 +1054,9 @@ impl<T: Trait> Module<T> {
 	}
 
 
+	/// 删除被选中的那天的记录
 	fn remove_per_day_record(day: T::BlockNumber, who: T::AccountId) {
-		/// 删除被选中的那天的记录
+
 		let mut all_days = <MinerDays<T>>::get(&who);
 		let all_tx = <MinerAllDaysTx<T>>::get(who.clone(), day.clone());
 		//如果当天交易存在 那么就删除掉
@@ -1036,9 +1077,9 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	/// 这里主要是金额算力  次数算力可以忽略不计
+	/// 判断该token在全网算力是否超额 这里主要是金额算力  次数算力可以忽略不计
 	fn is_token_power_more_than_portion(symbol: Vec<u8>) -> result::Result<bool, DispatchError>{// 参数要小写
-		/// 判断该token在全网算力是否超额
+
 		let mut is_too_large: bool = false;
 		let mut max_portion: Permill = Permill::from_percent(0);
 		let block_num = Self::now();
@@ -1062,31 +1103,31 @@ impl<T: Trait> Module<T> {
 
 		match symbol.clone() {
 			_ if symbol.clone() == btc => {
-				if now_tokenpower_info.btc_total_power  > <BTCMaxPortion>::get() * all_token_power_total{
+				if now_tokenpower_info.btc_total_power  > <MRbtc>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == eth => {
-				if now_tokenpower_info.eth_total_power  > <ETHMaxPortion>::get() * all_token_power_total{
+				if now_tokenpower_info.eth_total_power  > <MReth>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == usdt => {
-				if now_tokenpower_info.usdt_total_power  > <USDTMaxPortion>::get() * all_token_power_total{
+				if now_tokenpower_info.usdt_total_power  > <MRusdt>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == eos => {
-				if now_tokenpower_info.eos_total_power  > <EOSMaxPortion>::get() * all_token_power_total{
+				if now_tokenpower_info.eos_total_power  > <MReos>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == ecap => {
-				if now_tokenpower_info.ecap_total_power  > <ECAPMaxPortion>::get() * all_token_power_total{
+				if now_tokenpower_info.ecap_total_power  > <MRecap>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
@@ -1128,23 +1169,23 @@ impl<T: Trait> Module<T> {
 
 		match symbol.clone() {
 			_ if btc == symbol.clone()  => {
-				ensure!(T::LAbtc::get() > power_info.amount_power && T::LCbtc::get() > power_info.count_power,
+				ensure!(<LAbtc>::get() > power_info.amount_power && <LCbtc>::get() > power_info.count_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if eth == symbol.clone() =>  {
-				ensure!(T::LAeth::get() > power_info.amount_power && T::LCeth::get() > power_info.count_power,
+				ensure!(<LAeth>::get() > power_info.amount_power && <LCeth>::get() > power_info.count_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if usdt == symbol.clone() => {
-				ensure!(T::LAusdt::get() > power_info.amount_power && T::LCusdt::get() > power_info.count_power,
+				ensure!(<LAusdt>::get() > power_info.amount_power && <LCusdt>::get() > power_info.count_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if eos == symbol.clone() => {
-				ensure!(T::LAeos::get() > power_info.amount_power && T::LCeos::get() > power_info.count_power,
+				ensure!(<LAeos>::get() > power_info.amount_power && <LCeos>::get() > power_info.count_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if ecap == symbol.clone() => {
-				ensure!(T::LAecap::get() > power_info.amount_power && T::LCecap::get() > power_info.count_power,
+				ensure!(<LAecap>::get() > power_info.amount_power && <LCecap>::get() > power_info.count_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ => return Err(Error::<T>::UnknownSymbol)?
@@ -1165,23 +1206,23 @@ impl<T: Trait> Module<T> {
 
 		 match symbol.clone() {
 			_ if btc == symbol.clone()  => {
-				ensure!(<BTCLimitCount>::get() > now_token_power_info.btc_total_count && <BTCLimitAmount>::get() > now_token_power_info.btc_total_amount,
+				ensure!(<TLCbtc>::get() > now_token_power_info.btc_total_count && <TLAbtc>::get() > now_token_power_info.btc_total_amount,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if eth == symbol.clone() =>  {
-				ensure!(<ETHLimitCount>::get() > now_token_power_info.eth_total_count && <ETHLimitAmount>::get() > now_token_power_info.eth_total_amount,
+				ensure!(<TLCeth>::get() > now_token_power_info.eth_total_count && <TLAeth>::get() > now_token_power_info.eth_total_amount,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if usdt == symbol.clone() => {
-				ensure!(<USDTLimitCount>::get() > now_token_power_info.usdt_total_count && <USDTLimitAmount>::get() > now_token_power_info.usdt_total_amount,
+				ensure!(<TLCusdt>::get() > now_token_power_info.usdt_total_count && <TLAusdt>::get() > now_token_power_info.usdt_total_amount,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if eos == symbol.clone() => {
-				ensure!(<EOSLimitCount>::get() > now_token_power_info.eos_total_count && <EOSLimitAmount>::get() > now_token_power_info.eos_total_amount,
+				ensure!(<TLCeos>::get() > now_token_power_info.eos_total_count && <TLAeos>::get() > now_token_power_info.eos_total_amount,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if ecap == symbol.clone() => {
-				ensure!(<ECAPLimitCount>::get() > now_token_power_info.ecap_total_count && <ECAPLimitAmount>::get() > now_token_power_info.ecap_total_amount,
+				ensure!(<TLCecap>::get() > now_token_power_info.ecap_total_count && <TLAecap>::get() > now_token_power_info.ecap_total_amount,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ => return Err(Error::<T>::UnknownSymbol)?
@@ -1202,7 +1243,7 @@ impl<T: Trait> Module<T> {
 
 		let block_num = Self::now(); // 获取区块的高度
 
-		let mut per_day_tokens = <PerDayMinReward<T>>::get();
+		let mut per_day_tokens = T::PerDayMinReward::get();
 
 		// 国库可以使用的钱
 		let useable_balance = Self::pot();
@@ -1214,7 +1255,7 @@ impl<T: Trait> Module<T> {
 			per_day_tokens = useable_balance.clone();
 		}
 
-		let e: u32 = (100 * <<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(block_num).unwrap_or(u64::max_value())/(36525*T::SubHalfDuration::get()*<<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(T::ArchiveDuration::get()).unwrap_or(u64::max_value()))) as u32;
+		let e: u32 = (100 * <<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(block_num).unwrap_or(u64::max_value())/(36525*SubHalfDuration*<<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(T::ArchiveDuration::get()).unwrap_or(u64::max_value()))) as u32;
 
 		// 128年之后的挖矿奖励基本为0 所以这时候可以使用最低奖励了
 		if e > 32{
@@ -1223,12 +1264,12 @@ impl<T: Trait> Module<T> {
 		else{
 
 			let num = 2_u32.pow(e);  // 意味着e最大值是32  运行32*4 = 128年
-			per_day_tokens = T::FirstYearPerDayMineRewardToken::get()/<BalanceOf<T>>::from(num);
+			per_day_tokens = <BalanceOf<T> as TryFrom::<Balance>>::try_from(FirstYearPerDayMineRewardToken).ok().unwrap()/<BalanceOf<T>>::from(num);
 
 			// 如果奖励数过低  那么启用最低奖励
-			if per_day_tokens < <PerDayMinReward<T>>::get(){
+			if per_day_tokens < T::PerDayMinReward::get(){
 
-				per_day_tokens = <PerDayMinReward<T>>::get();
+				per_day_tokens = T::PerDayMinReward::get();
 				T::Currency3::make_free_balance_be(&MODULE_ID.into_account(), useable_balance - per_day_tokens + T::Currency3::minimum_balance());
 			}
 
@@ -1266,7 +1307,7 @@ impl<T: Trait> Module<T> {
 
 		if <Founders<T>>::get().len() != 0{
 			// 创始团队成员拿20%
-			 founders_total_reward = thistime_reward.clone()*<BalanceOf<T>>::from(<FoundationShareRatio>::get())/<BalanceOf<T>>::from(100);
+			 founders_total_reward = T::FoundationShareRatio::get() * thistime_reward.clone();
 
 		}
 
@@ -1312,7 +1353,7 @@ impl<T: Trait> Module<T> {
 		let mut count = 0u64;
 
 		// 把金额放大100倍
-		nums = nums.checked_mul(<Multiple>::get()).ok_or(Error::<T>::Overfolw)?;
+		nums = nums.checked_mul(Multiple).ok_or(Error::<T>::Overfolw)?;
 
 		// 计算膨胀算力
 		nums = Self::inflate_power(who.clone(), nums);
@@ -1320,11 +1361,11 @@ impl<T: Trait> Module<T> {
 		// 根据挖矿种类计算算力
 		if mine_tag == MineTag::CLIENT{
 			// 客户端挖矿
-			nums = nums.checked_mul(<ClientWorkPowerRatio>::get()).ok_or(Error::<T>::Overfolw)? / 100u64;
+			nums = T::ClientRatio::get() * nums;
 		}
 		else{
 			// 钱包挖矿
-			nums = nums.checked_mul(100u64 - <ClientWorkPowerRatio>::get()).ok_or(Error::<T>::Overfolw)?  / 100u64;
+			nums = nums - T::ClientRatio::get() * nums ;
 		}
 
 		let mut final_power = 0u64;
@@ -1336,8 +1377,8 @@ impl<T: Trait> Module<T> {
 			}
 
 			// 如果是金额算力 单次转账金额超过硬顶则用硬顶金额
-			if nums > MLA.checked_mul(<Multiple>::get()).ok_or(Error::<T>::MLAError)?{
-				nums = MLA.checked_mul(<Multiple>::get()).ok_or(Error::<T>::MLAError)?;
+			if nums > MLA.checked_mul(Multiple).ok_or(Error::<T>::MLAError)?{
+				nums = MLA.checked_mul(Multiple).ok_or(Error::<T>::MLAError)?;
 			}
 		}
 
@@ -1373,7 +1414,7 @@ impl<T: Trait> Module<T> {
 		}
 
 		// 指定exp的值
-		let exp = <DeclineExp>::get() as u128;
+		let exp = T::DeclineExp::get() as u128;
 
 		// 大于100倍 直接用100
 		if n >= 100 {
@@ -1487,7 +1528,7 @@ impl<T: Trait> Module<T> {
 
 			PowerTest::put((6u64, 6u64, amount_power, count_power));
 			// 如果平均算力小于最初平均算力  那么用最初平均算力
-			let min_amount_power = T::ZeroDayAmount::get() * <Multiple>::get() / INIT_MINER_COUNT * count;
+			let min_amount_power = T::ZeroDayAmount::get() * Multiple / INIT_MINER_COUNT * count;
 			if amount_power < min_amount_power{
 				<LastTotolAmountPowerAndMinersCount>::put((min_amount_power, count));
 			}
@@ -1495,7 +1536,7 @@ impl<T: Trait> Module<T> {
 				<LastTotolAmountPowerAndMinersCount>::put((amount_power, count));
 			}
 
-			let min_count_power = T::ZeroDayCount::get() * <Multiple>::get() / INIT_MINER_COUNT * count;
+			let min_count_power = T::ZeroDayCount::get() * Multiple / INIT_MINER_COUNT * count;
 			if count_power < min_count_power {
 				<LastTotolCountPowerAndMinersCount>::put((min_count_power, count));
 			}
@@ -1524,7 +1565,7 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	// 获取当下🉐 时间戳
+	// 获取当下的时间戳
 	fn time() -> T::Moment{
 		<timestamp::Module<T>>::get()
 
@@ -1574,117 +1615,16 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	// 这个方法的好处是让这些参数不再是常数 而是随时可以进行调整修改
-	fn initialize_mutable_parameter(members: &[T::AccountId]){
-		// 初始化治理参数
+	/// 初始化
+	fn initialize_founders(members: &[T::AccountId]){
 
 		<Founders<T>>::put(members);
 
-		<Alpha>::put(T::Alpha::get());
-
-		<AmountPowerPortionRatio>::put(T::AmountPowerPortionRatio::get());
-
-		<BTCMaxPortion>::put(T::BTCMaxPortion::get());
-
-		<ETHMaxPortion>::put(T::ETHMaxPortion::get());
-
-		<EOSMaxPortion>::put(T::EOSMaxPortion::get());
-
-		<USDTMaxPortion>::put(T::USDTMaxPortion::get());
-
-		<FoundationShareRatio>::put(T::FoundationShareRatio::get());
-
-		<MinerSharePortion>::put(T::MinerSharePortion::get());
-
-		<FatherSharePortion>::put(T::FatherSharePortion::get());
-
-		<SuperSharePortion>::put(T::SuperSharePortion::get());
-
-		<BTCLimitCount>::put(T::BTCLimitCount::get());
-
-		<BTCLimitAmount>::put(T::BTCLimitAmount::get());
-
-		<ETHLimitCount>::put(T::ETHLimitCount::get());
-
-		<ETHLimitAmount>::put(T::ETHLimitAmount::get());
-
-		<EOSLimitCount>::put(T::EOSLimitCount::get());
-
-		<EOSLimitAmount>::put(T::EOSLimitAmount::get());
-
-		<USDTLimitCount>::put(T::USDTLimitCount::get());
-
-		<USDTLimitAmount>::put(T::USDTLimitAmount::get());
-
-		<MLAbtc>::put(T::MLAbtc::get());
-
-		<MLAusdt>::put(T::MLAusdt::get());
-
-		<MLAeos>::put(T::MLAeos::get());
-
-		<MLAeth>::put(T::MLAeth::get());
-
-		<PerDayMinReward<T>>::put(T::PerDayMinReward::get());
-
-		<ClientWorkPowerRatio>::put(T::ClientWorkPowerRatio::get());
-
-		<Multiple>::put(T::Multiple::get());
-
-		<DeclineExp>::put(T::DeclineExp::get());
-
-		<MiningMaxNum>::put(T::MiningMaxNum::get());
-
 	}
 
 }
 
 
-// *****************************对值作限制***********************************************************
-
-// todo 必须要限制百分比的范围
-trait BoundU64{
-	fn get_bound_param(x: u64) -> result::Result<u64, &'static str >;
-	fn set_multiple(x: u64) -> result::Result<u64, &'static str >;
-	fn get_exp(x: u64) -> result::Result<u64, &'static str >;
-}
-
-trait BoundU32{
-	fn get_bound_param(x: u32) -> result::Result<u32, &'static str>;
-}
-
-impl BoundU32 for u32{
-	fn get_bound_param(x: u32) -> Result<u32, &'static str> {
-		match x {
-			0...101 => Ok(x),
-			_ => Err("输入数目超出边界")
-		}
-	}
-}
-
-impl BoundU64 for u64{
-	fn get_bound_param(x: u64) -> Result<u64, &'static str> {
-		match x {
-			0u64...101u64 => Ok(x),
-			_ => Err("输入数目超出边界")
-		}
-	}
-
-	fn set_multiple(x: u64) -> Result<u64, &'static str>{
-		if x % 100 == 0 && x > 0 && x <= 10_0000{
-			return Ok(x);
-		}
-		else{
-			return Err("输入的倍数形式不对");
-		}
-	}
-
-	fn get_exp(x: u64) -> Result<u64, &'static str>{
-		match x {
-			11...20 => Ok(x),
-			_ => Err("指数值输入错误")
-		}
-	}
-}
 
 
 

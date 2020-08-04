@@ -233,7 +233,7 @@ parameter_types! {
 
 	pub const Alpha: Permill = Permill::from_percent(50);
 	// 客户端挖矿奖励占比
-	pub const AmountPowerPortionRatio: Permill = Permill::from_percent(50);
+	pub const AR: Permill = Permill::from_percent(50);
 
 	// 这个数额是多少需要斟酌
 	//*********************************************************************************************
@@ -242,7 +242,7 @@ parameter_types! {
 	// 如果有上级 膨胀多少个百分比的算力
 	pub const FatherInflationRatio: Permill = Permill::from_percent(50);
 	// 每次挖矿创始团队拿多少占比的奖励
-	pub const FoundationShareRatio: u32 = 20;
+	pub const FoundationShareRatio: Permill = Permill::from_percent(20);
 	pub const MinerSharePortion: u32 = 100;
 	pub const FatherSharePortion: u32 = 50;
 	pub const SuperSharePortion: u32 = 25;
@@ -271,7 +271,7 @@ parameter_types! {
 	pub const LAecap: USD = 100_0000_00000;
 	pub const LCecap: Count = 100_0000;
 
-	pub const ClientWorkPowerRatio: u64 = 50;
+	pub const ClientRatio: Permill = Permill::from_percent(50);
 	pub const PerDayMinReward: Balance = 100*DOLLARS;
 
 	// 全网挖矿次数硬顶
@@ -290,16 +290,16 @@ parameter_types! {
 
 	pub const SubHalfDuration:Duration = 4; // 四年减半
 
-	// 全网token挖矿占比硬顶
-	pub const BTCMaxPortion: Permill = Permill::from_percent(70);
-	pub const ETHMaxPortion: Permill = Permill::from_percent(10);
-	pub const EOSMaxPortion: Permill = Permill::from_percent(8);
-	pub const USDTMaxPortion: Permill = Permill::from_percent(50);
-	pub const ECAPMaxPortion: Permill = Permill::from_percent(50);
+//	// 全网token挖矿占比硬顶
+//	pub const BTCMaxPortion: Permill = Permill::from_percent(70);
+//	pub const ETHMaxPortion: Permill = Permill::from_percent(10);
+//	pub const EOSMaxPortion: Permill = Permill::from_percent(8);
+//	pub const USDTMaxPortion: Permill = Permill::from_percent(50);
+//	pub const ECAPMaxPortion: Permill = Permill::from_percent(50);
 
-	pub const MiningMaxNum: Count = 100;  // 一个人最大挖矿次数可以是100笔
+//	pub const MiningMaxNum: Count = 100;  // 一个人最大挖矿次数可以是100笔
 
-	pub const Multiple: u64 = 1_0000;
+//	pub const Multiple: u64 = 1_0000;
 
 	pub const ZeroDayAmount: u64 = INIT_AMOUNT_POWER * USDT_DECIMALS * INIT_MINER_COUNT;  // 是最小转账单位 * 每个人平均初始算力 * 20个人
 
@@ -313,93 +313,43 @@ parameter_types! {
 impl mine::Trait for Runtime {
 
 	type ReportedTxs = Report;
+
 	type TechMmebersOrigin = TechnicalCommittee; // 获取所有技术委员会成员
+
 	type ShouldAddOrigin = ();
+
 	type Event = Event;
+
 	type Currency3 = Balances;
+
 	type MineIndex = u64;
+
 	type ArchiveDuration = ArchiveDuration;
+
 	type RemovePersonRecordDuration = RemovePersonRecordDuration;
 
-	type FirstYearPerDayMineRewardToken = FirstYearPerDayMineRewardToken;
-
-	type BTCLimitCount = BTCLimitCount;
-	type BTCLimitAmount =  BTCLimitAmount;
-
-	type ETHLimitCount = ETHLimitCount;
-	type ETHLimitAmount =  ETHLimitAmount;
-
-	type EOSLimitCount = EOSLimitCount;
-	type EOSLimitAmount =  EOSLimitAmount;
-
-	type USDTLimitCount = USDTLimitCount;
-	type USDTLimitAmount =  USDTLimitAmount;
-
-	type ECAPLimitCount = ECAPLimitCount;
-	type ECAPLimitAmount =  ECAPLimitAmount;
-
-
-	type MiningMaxNum = MiningMaxNum;
-
-	type BTCMaxPortion = BTCMaxPortion;
-	type ETHMaxPortion = ETHMaxPortion;
-	type EOSMaxPortion = EOSMaxPortion;
-	type USDTMaxPortion = USDTMaxPortion;
-	type ECAPMaxPortion = ECAPMaxPortion;
-
-	// 单次转账金额硬顶
-	type MLAbtc = MLAbtc;
-	type MLAusdt = MLAusdt;
-	type MLAeos = MLAeos;
-	type MLAeth = MLAeth;
-	type MLAecap = MLAecap;
-
-	// 个人算力硬顶
-	type LAbtc = LAbtc;
-	type LCbtc = LCbtc;
-
-	type LAeth = LAeth;
-	type LCeth = LCeth;
-
-	type LAusdt = LAusdt;
-	type LCusdt = LCusdt;
-
-	type LAeos = LAeos;
-	type LCeos = LCeos;
-
-	type LAecap = LAecap;
-	type LCecap = LCecap;
-
-
-
 	type SuperiorInflationRatio = SuperiorInflationRatio;
+
 	type FatherInflationRatio = FatherInflationRatio;
 
-	type  SubHalfDuration = SubHalfDuration; // 减半周期 如果是四年直接写4 5年直接写5
+	type AR = AR;
 
-	//***以下是可治理的参数***
-	type Alpha = Alpha;  // 钝化系数(如果是0.3就写30， 0.5就写50，如此类推)
-	type AmountPowerPortionRatio = AmountPowerPortionRatio;  // 金额算力的占比系数(如果是0.3就写30， 0.5就写50，如此类推)
-
-	// 创始团队成员的分润占比（20% 写20； 25% 写25；以此类推）
 	type FoundationShareRatio = FoundationShareRatio;
-	// ***注意 下面的值不是占比 占比在相应方法中计算  如果矿工是100， 上级是50， 上上级是25， 那么
-	// 矿工的分润比就是 100 / （100 + 50 + 25）
+
 	// 矿工奖励部分
-	type MinerSharePortion = MinerSharePortion; //
+	type MinerSharePortion = MinerSharePortion;
+
 	// 上级的奖励部分
 	type FatherSharePortion = FatherSharePortion;
+
 	// 上上级的奖励部分
 	type SuperSharePortion = SuperSharePortion;
 
 	// 客户端挖矿占比
-	type ClientWorkPowerRatio = ClientWorkPowerRatio;
+	type ClientRatio = ClientRatio;
 
 	// 单日全网最低挖矿奖励
 	type PerDayMinReward = PerDayMinReward;
-
-	// 算力相对于金额与次数的倍数
-	type Multiple = Multiple;
 
 	// 第一天挖矿初始化金额
 	type ZeroDayAmount = ZeroDayAmount;
@@ -407,7 +357,7 @@ impl mine::Trait for Runtime {
 	// 第一天挖矿初始化频次
 	type ZeroDayCount = ZeroDayCount;
 
-	// 钝化用到的下降指数
+	// 钝化用到的下降指数 1.5写15 1.6写16
 	type DeclineExp = DeclineExp;
 
 }
