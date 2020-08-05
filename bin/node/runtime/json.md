@@ -50,46 +50,68 @@
   "MaxLenOfBurn": "u32"
   }
   },
-
-  "ChangeableParam": {
+  "MR": {
     "_enum": {
+      "Btc": "Permill",
+      "Eth": "Permill",
+      "Usdt": "Permill",
+      "Eos": "Permill",
+      "Ecap": "Permill"
+      }
 
-      "Alpha": "u32",
-      "AmountPowerPortion": "u32",
+    },
+  "TLC": {
+      "_nemu": {
+          "BtcCount": "u64",
+          "EthCount": "u64",
+          "UsdtCount": "u64",
+          "EosCount": "u64",
+          "EcapCount": "u64"
+      }
+   },
 
-      "MPbtc": "u32",
-      "MPeth": "u32",
-      "MPeos": "u32",
-      "MPusdt": "u32",
-      "MPecap": "u32",
+   "LC": {
+          "_nemu": {
+              "BtcCount": "u64",
+              "EthCount": "u64",
+              "UsdtCount": "u64",
+              "EosCount": "u64",
+              "EcapCount": "u64"
+          }
+       },
 
-      "FoundationShareRatio": "u32",
-      "MinerSharePortion": "u32",
-      "FatherSharePortion": "u32",
-      "SuperSharePortion": "u32",
-
-      "LCeth": "u64",
-      "LAeth": "u64",
-
-      "LCbtc": "u64",
-      "LAbtc": "u64",
-      "LCeos": "u64",
-      "LAeos": "u64",
-      "LCusdt": "u64",
-      "LAusdt": "u64",
-      "LCecap": "u64",
-      "LAecap": "u64",
-
-      "MLAbtc": "u64",
-      "MLAusdt": "u64",
-      "MLAeos": "u64",
-      "MLAeth": "u64",
-      "MLAecap": "u64",
-
-      "ClientSharePortion": "u64",
-      "DeclineExp": "u64"
+  "LA": {
+    "_enum": {
+     "BtcAmount": "u64",
+     "EthAmount": "u64",
+     "UsdtAmount": "u64",
+     "EosAmount": "u64",
+     "EcapAmount": "u64"
     }
-  },
+   },
+
+  "TLA": {
+    "_enum": {
+      "BtcAmount": "u64",
+     "EthAmount": "u64",
+     "UsdtAmount": "u64",
+     "EosAmount": "u64",
+     "EcapAmount": "u64"
+}
+
+},
+
+  "MLA": {
+    "_enum": {
+      "BtcAmount": "u64",
+     "EthAmount": "u64",
+     "UsdtAmount": "u64",
+     "EosAmount": "u64",
+     "EcapAmount": "u64"
+}
+
+},
+
 
 
   "MinerInfo": {

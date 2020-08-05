@@ -16,7 +16,7 @@ use node_primitives::{Count, USD, Duration, Balance};
 use sp_std::{result, collections::btree_set::BTreeSet};
 use num_traits::float::FloatCore;
 use pallet_timestamp as timestamp;
-use crate::constants::{symbol::{USDT, BTC, EOS, ETH, ECAP}, currency::*};
+use crate::constants::{symbol::{USDT, BTC, EOS, ETH, ECAP}, currency::*, genesis_params::*, time::*};
 
 use crate::report::{self, VoteRewardPeriodEnum, BeingReportedTxsOf};
 use crate::constants::{time::{MINUTES, DAYS, HOURS}, genesis_params::*};
@@ -236,55 +236,55 @@ decl_storage! {
 		MinerAllDaysTx get(fn mineralldaystx): double_map hasher(blake2_128_concat) T::AccountId, hasher(blake2_128_concat) T::BlockNumber => Vec<Vec<u8>>;
 
 		/// 币种btc的最大算力占比
-		MRbtc get(fn btc_max_portion): Permill;
+		MRbtc get(fn btc_max_portion): Permill = Permill::from_percent(70);
 		/// 币种eth的最大算力占比
-		MReth get(fn eth_max_portion): Permill;
+		MReth get(fn eth_max_portion): Permill = Permill::from_percent(10);
 		/// 币种eos的最大算力占比
-		MReos get(fn eos_max_portion): Permill;
+		MReos get(fn eos_max_portion): Permill = Permill::from_percent(8);
 		/// 币种usdt的最大算力占比
-		MRusdt get(fn usdt_max_portion): Permill;
+		MRusdt get(fn usdt_max_portion): Permill = Permill::from_percent(50);
 		/// 币种ecap的最大算力占比
-		MRecap get(fn ecap_max_portion): Permill;
+		MRecap get(fn ecap_max_portion): Permill = Permill::from_percent(50);
 
 		/// 矿工的奖励部分
-		MinerSharePortion get(fn miner_share_portion): u32;
+		MinerSharePortion get(fn miner_share_portion): u32 = 100;
 		/// 上级的奖励部分
-		FatherSharePortion get(fn father_share_portion): u32;
+		FatherSharePortion get(fn father_share_portion): u32 = 50;
 		/// 上上级的奖励部分
-		SuperSharePortion get(fn super_share_portion): u32;
+		SuperSharePortion get(fn super_share_portion): u32 = 25;
 
 		/// 币种eth的次数算力硬顶
-		TLCeth get(fn eth_limit_count): Count;
+		TLCeth get(fn eth_limit_count): Count = 10000 * Multiple;
 		/// 币种btc的次数算力硬顶
-		TLCbtc get(fn btc_limit_count): Count;
+		TLCbtc get(fn btc_limit_count): Count = 10000 * Multiple;
 		/// 币种usdt的次数算力硬顶
-		TLCusdt get(fn usdt_limit_count): Count;
+		TLCusdt get(fn usdt_limit_count): Count = 10000 * Multiple;
 		/// 币种ecap的次数算力硬顶
-		TLCecap get(fn ecap_limit_count): Count;
+		TLCecap get(fn ecap_limit_count): Count = 10000 * Multiple;
 		/// 币种eos的次数算力硬顶
-		TLCeos get(fn eos_limit_count): Count;
+		TLCeos get(fn eos_limit_count): Count = 10000 * Multiple;
 
 		/// 币种btc的金额算力硬顶
-		TLAbtc get(fn btc_limit_amount): USD;
+		TLAbtc get(fn btc_limit_amount): USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS * Multiple;
 		/// 币种eth的金额算力硬顶
-		TLAeth get(fn eth_limit_amount): USD;
+		TLAeth get(fn eth_limit_amount): USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS * Multiple;
 		/// 币种eos的金额算力硬顶
-		TLAeos get(fn eos_limit_amount): USD;
+		TLAeos get(fn eos_limit_amount): USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS * Multiple;
 		/// 币种usdt的金额算力硬顶
-		TLAusdt get(fn usdt_limit_amount): USD;
+		TLAusdt get(fn usdt_limit_amount): USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS * Multiple;
 		/// 币种ecap的金额算力硬顶
-		TLAecap get(fn ecap_limit_amount): USD;
+		TLAecap get(fn ecap_limit_amount): USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS * Multiple;
 
 		/// btc单次转账的金额硬顶
-		MLAbtc get(fn mla_btc): USD;
+		MLAbtc get(fn mla_btc): USD = 10_0000 * USDT_DECIMALS * Multiple;
 		/// usdt单次转账的金额硬顶
-		MLAusdt get(fn mla_usdt): USD;
+		MLAusdt get(fn mla_usdt): USD = 5000 * USDT_DECIMALS * Multiple;
 		/// eos单次转账的金额硬顶
-		MLAeos get(fn mla_eos): USD;
+		MLAeos get(fn mla_eos): USD = 1_0000 * USDT_DECIMALS * Multiple;
 		/// eth单次转账的金额硬顶
-		MLAeth get(fn mla_eth): USD;
+		MLAeth get(fn mla_eth): USD = 4_0000 * USDT_DECIMALS * Multiple;
 		/// ecap单次转账的金额硬顶
-		MLAecap get(fn mla_ecap): USD;
+		MLAecap get(fn mla_ecap): USD = 5000 * 2 * USDT_DECIMALS * Multiple;
 
 		/// 本周期的奖励总金额
 		ThisArchiveDurationTotalReward get(fn this_duration_reward): BalanceOf<T>;
@@ -296,29 +296,29 @@ decl_storage! {
 		HistorySpecificReward get(fn history_specific_reward): Vec<(u32, BalanceOf<T>)>;
 
 		/// 个人当天挖矿次数硬顶
-		MiningMaxNum get(fn mining_max_num): u64;
+		MiningMaxNum get(fn mining_max_num): u64 = 10000;
 
 		/// 个人btc当天挖矿金额算力硬顶
-		LAbtc get(fn la_btc): u64;
+		LAbtc get(fn la_btc): u64 = 100_0000_00000 * Multiple;
 		/// 个人eth当天挖矿金额算力硬顶
-		LAeth get(fn la_eth): u64;
+		LAeth get(fn la_eth): u64 = 100_0000_00000 * Multiple;
 		/// 个人usdt当天挖矿金额算力硬顶
-		LAusdt get(fn la_usdt): u64;
+		LAusdt get(fn la_usdt): u64 = 100_0000_00000 * Multiple;
 		/// 个人eos当天挖矿金额算力硬顶
-		LAeos get(fn la_eos): u64;
+		LAeos get(fn la_eos): u64 = 100_0000_00000 * Multiple;
 		/// 个人ecap当天挖矿金额算力硬顶
-		LAecap get(fn la_ecap): u64;
+		LAecap get(fn la_ecap): u64 = 100_0000_00000 * Multiple;
 
 		/// 个人btc当天挖矿次数算力硬顶
-		LCbtc get(fn lc_btc): u64;
+		LCbtc get(fn lc_btc): u64 = 100_0000 * Multiple;
 		/// 个人eth当天挖矿次数算力硬顶
-		LCeth get(fn lc_eth): u64;
+		LCeth get(fn lc_eth): u64 = 100_0000 * Multiple;
 		/// 个人usdt当天挖矿次数算力硬顶
-		LCusdt get(fn lc_usdt): u64;
+		LCusdt get(fn lc_usdt): u64 = 100_0000 * Multiple;
 		/// 个人eos当天挖矿次数算力硬顶
-		LCeos get(fn lc_eos): u64;
+		LCeos get(fn lc_eos): u64 = 100_0000 * Multiple;
 		/// 个人ecap当天挖矿次数算力硬顶
-		LCecap get(fn lc_ecap): u64;
+		LCecap get(fn lc_ecap): u64 = 100_0000 * Multiple;
 
 		/// 创始人
 		Founders get(fn founders): Vec<T::AccountId>;
@@ -456,9 +456,14 @@ decl_module! {
     	/// 钝化指数
     	const DeclineExp: u64 = T::DeclineExp::get();
 
+    	/// 有上上级的算力膨胀比例
+    	const SuperiorInflationRatio: Permill = T::SuperiorInflationRatio::get();
+
+    	/// 有上级的膨胀比例
+    	const FatherInflationRatio: Permill = T::FatherInflationRatio::get();
+
     	/// 创始团队成员的分润比例
     	const FoundationShareRatio: Permill = T::FoundationShareRatio::get();
-
 
     	type Error = Error<T>;
         fn deposit_event() = default;
@@ -1206,23 +1211,23 @@ impl<T: Trait> Module<T> {
 
 		 match symbol.clone() {
 			_ if btc == symbol.clone()  => {
-				ensure!(<TLCbtc>::get() > now_token_power_info.btc_total_count && <TLAbtc>::get() > now_token_power_info.btc_total_amount,
+				ensure!(<TLCbtc>::get() > now_token_power_info.btc_count_power && <TLAbtc>::get() > now_token_power_info.btc_amount_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if eth == symbol.clone() =>  {
-				ensure!(<TLCeth>::get() > now_token_power_info.eth_total_count && <TLAeth>::get() > now_token_power_info.eth_total_amount,
+				ensure!(<TLCeth>::get() > now_token_power_info.eth_count_power && <TLAeth>::get() > now_token_power_info.eth_amount_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if usdt == symbol.clone() => {
-				ensure!(<TLCusdt>::get() > now_token_power_info.usdt_total_count && <TLAusdt>::get() > now_token_power_info.usdt_total_amount,
+				ensure!(<TLCusdt>::get() > now_token_power_info.usdt_count_power && <TLAusdt>::get() > now_token_power_info.usdt_amount_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if eos == symbol.clone() => {
-				ensure!(<TLCeos>::get() > now_token_power_info.eos_total_count && <TLAeos>::get() > now_token_power_info.eos_total_amount,
+				ensure!(<TLCeos>::get() > now_token_power_info.eos_count_power && <TLAeos>::get() > now_token_power_info.eos_amount_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ if ecap == symbol.clone() => {
-				ensure!(<TLCecap>::get() > now_token_power_info.ecap_total_count && <TLAecap>::get() > now_token_power_info.ecap_total_amount,
+				ensure!(<TLCecap>::get() > now_token_power_info.ecap_count_power && <TLAecap>::get() > now_token_power_info.ecap_amount_power,
 				Error::<T>::AmountOrCountToMax);
 			},
 			_ => return Err(Error::<T>::UnknownSymbol)?
@@ -1352,7 +1357,7 @@ impl<T: Trait> Module<T> {
 
 		let mut count = 0u64;
 
-		// 把金额放大100倍
+		// 把金额放大Multiple倍(算力大概是金额或是次数的Multiple倍)
 		nums = nums.checked_mul(Multiple).ok_or(Error::<T>::Overfolw)?;
 
 		// 计算膨胀算力

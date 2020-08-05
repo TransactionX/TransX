@@ -227,16 +227,7 @@ parameter_types! {
 	pub const ArchiveDuration: BlockNumber = ArchiveDurationTime;
 	// 最多保存多少天的挖矿记录
 	pub const RemovePersonRecordDuration: BlockNumber = 30*DAYS;
-
-	// 第一年每天的挖矿奖励
-	pub const FirstYearPerDayMineRewardToken: Balance = 2100_0000*DOLLARS/2/4/36525*100; // 这里一年直接用365.25天来算
-
-	pub const Alpha: Permill = Permill::from_percent(50);
-	// 客户端挖矿奖励占比
 	pub const AR: Permill = Permill::from_percent(50);
-
-	// 这个数额是多少需要斟酌
-	//*********************************************************************************************
 	// 如果有上上级 膨胀多少个百分比的算力
 	pub const SuperiorInflationRatio: Permill = Permill::from_percent(25);
 	// 如果有上级 膨胀多少个百分比的算力
@@ -246,60 +237,10 @@ parameter_types! {
 	pub const MinerSharePortion: u32 = 100;
 	pub const FatherSharePortion: u32 = 50;
 	pub const SuperSharePortion: u32 = 25;
-	// ********************************************************************************************
-
-	// 单次金额算力硬顶（没有次数 因为每次都是1）
-	pub const MLAbtc: USD = 10_0000 * USDT_DECIMALS;
-	pub const MLAeth: USD = 4_0000 * USDT_DECIMALS;
-	pub const MLAeos: USD = 1_0000 * USDT_DECIMALS;
-	pub const MLAusdt: USD = 5000 * USDT_DECIMALS;
-	pub const MLAecap: USD = 5000 * 2 * USDT_DECIMALS;
-
-	// 个人算力硬顶
-	pub const LAbtc: USD = 100_0000_00000;
-	pub const LCbtc: Count = 100_0000;
-
-	pub const LAeth: USD = 100_0000_00000;
-	pub const LCeth: Count = 100_0000;
-
-	pub const LAusdt: USD = 100_0000_00000;
-	pub const LCusdt: Count = 100_0000;
-
-	pub const LAeos: USD = 100_0000_00000;
-	pub const LCeos: Count = 100_0000;
-
-	pub const LAecap: USD = 100_0000_00000;
-	pub const LCecap: Count = 100_0000;
 
 	pub const ClientRatio: Permill = Permill::from_percent(50);
+
 	pub const PerDayMinReward: Balance = 100*DOLLARS;
-
-	// 全网挖矿次数硬顶
-	pub const BTCLimitCount: Count = 10000;
-	pub const ETHLimitCount: Count = 10000;
-	pub const EOSLimitCount: Count = 10000;
-	pub const USDTLimitCount: Count = 10000;
-	pub const ECAPLimitCount: Count = 10000;
-
-	// 全网token挖矿金额硬顶
-	pub const BTCLimitAmount: USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS;
-	pub const ETHLimitAmount: USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS;
-	pub const EOSLimitAmount: USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS;
-	pub const USDTLimitAmount: USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS;
-	pub const ECAPLimitAmount: USD = 10000 * INIT_AMOUNT_POWER * USDT_DECIMALS;
-
-	pub const SubHalfDuration:Duration = 4; // 四年减半
-
-//	// 全网token挖矿占比硬顶
-//	pub const BTCMaxPortion: Permill = Permill::from_percent(70);
-//	pub const ETHMaxPortion: Permill = Permill::from_percent(10);
-//	pub const EOSMaxPortion: Permill = Permill::from_percent(8);
-//	pub const USDTMaxPortion: Permill = Permill::from_percent(50);
-//	pub const ECAPMaxPortion: Permill = Permill::from_percent(50);
-
-//	pub const MiningMaxNum: Count = 100;  // 一个人最大挖矿次数可以是100笔
-
-//	pub const Multiple: u64 = 1_0000;
 
 	pub const ZeroDayAmount: u64 = INIT_AMOUNT_POWER * USDT_DECIMALS * INIT_MINER_COUNT;  // 是最小转账单位 * 每个人平均初始算力 * 20个人
 
