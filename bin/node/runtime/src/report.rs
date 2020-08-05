@@ -55,6 +55,7 @@ pub enum ReportModuleAmount<BalanceOf>{
 	ReportReward(BalanceOf),
 	PunishmentAmount(BalanceOf),
 	CouncilReward(BalanceOf),
+	CancelReportSlash(BalanceOf),
 }
 
 
@@ -238,6 +239,7 @@ decl_module! {
 				ReportModuleAmount::ReportReward(x) => <ReportReward<T>>::put(x),
 				ReportModuleAmount::PunishmentAmount(x) => <IllegalPunishment<T>>::put(x),
 				ReportModuleAmount::CouncilReward(x) => <CouncilReward<T>>::put(x),
+				ReportModuleAmount::CancelReportSlash(x) => <CancelReportSlash<T>>::put(x),
 				_ => return Err(Error::<T>::Undefine)?,
 
 			}

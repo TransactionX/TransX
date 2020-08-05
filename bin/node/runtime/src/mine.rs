@@ -192,6 +192,15 @@ decl_event!(
         MinerPowerInfoArchived(BlockNumber),
         SetChangeableParam,
         StartMine,
+        SetFounders,
+        SetMaxMineCount,
+        SetMLA,
+        SetLA,
+        SetLC,
+        SetTLC,
+        SetTLA,
+        SetMR,
+
     }
 );
 
@@ -476,6 +485,7 @@ decl_module! {
 			// 输入的值不能为空
 			ensure!(who.len() != 0, Error::<T>::EmptyParam);
 			<Founders<T>>::put(who);
+			Self::deposit_event(RawEvent::SetFounders);
 			Ok(())
 
 		}
@@ -486,6 +496,7 @@ decl_module! {
 		fn set_max_mine_count(origin, count: u64) -> DispatchResult {
 			ensure_root(origin)?;
 			<MiningMaxNum>::put(count);
+			Self::deposit_event(RawEvent::SetMaxMineCount);
 			Ok(())
 
 		}
@@ -503,7 +514,7 @@ decl_module! {
 				MLA::EcapAmount(x) => <MLAecap>::put(x),
 				_ => return Err(Error::<T>::UnknownSymbol)?,
 			}
-
+			Self::deposit_event(RawEvent::SetMLA);
 			Ok(())
 		}
 
@@ -520,7 +531,7 @@ decl_module! {
 				LA::EcapAmount(x) => <LAecap>::put(x),
 				_ => return Err(Error::<T>::UnknownSymbol)?,
 			}
-
+			Self::deposit_event(RawEvent::SetLA);
 			Ok(())
 
 		}
@@ -539,7 +550,7 @@ decl_module! {
 				_ => return Err(Error::<T>::UnknownSymbol)?,
 
 			}
-
+			Self::deposit_event(RawEvent::SetLC);
 			Ok(())
 		}
 
@@ -557,7 +568,7 @@ decl_module! {
 				_ => return Err(Error::<T>::UnknownSymbol)?,
 
 			}
-
+			Self::deposit_event(RawEvent::SetTLC);
 			Ok(())
 		}
 
@@ -574,7 +585,7 @@ decl_module! {
 				TLA::EcapAmount(x) => <TLAecap>::put(x),
 				_ => return Err(Error::<T>::UnknownSymbol)?,
 			}
-
+			Self::deposit_event(RawEvent::SetTLA);
 			Ok(())
 
 		}
@@ -592,6 +603,7 @@ decl_module! {
 				MR::Ecap(x) => <MRecap>::put(x),
 				_ => return Err(Error::<T>::UnknownSymbol)?,
 			}
+			Self::deposit_event(RawEvent::SetMR);
 			Ok(())
 		}
 

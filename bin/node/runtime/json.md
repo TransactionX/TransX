@@ -22,7 +22,8 @@
      "ReportReserveAmount": "Balance",
     "ReportReward": "Balance",
     "PunishmentAmount": "Balance",
-    "CouncilReward": "Balance"
+    "CouncilReward": "Balance",
+    "CancelReportSlash": "Balance"
 }
 
 },
