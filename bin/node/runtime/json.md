@@ -27,7 +27,7 @@
 
 },
 
-  " ReportModuleTime": {
+  "ReportModuleTime": {
     "_enum": {
     "ProposalExpireTime": "BlockNumber",
     "RewardDuration": "BlockNumber"
