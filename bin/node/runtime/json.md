@@ -18,15 +18,22 @@
   },
 
   "ReportModuleAmount": {
-    "ReportReserveAmount": "Balance",
+    "_enum": {
+     "ReportReserveAmount": "Balance",
     "ReportReward": "Balance",
     "PunishmentAmount": "Balance",
     "CouncilReward": "Balance"
+}
+
 },
 
   " ReportModuleTime": {
+    "_enum": {
     "ProposalExpireTime": "BlockNumber",
     "RewardDuration": "BlockNumber"
+
+}
+
 },
 
   "AssetTime": {
