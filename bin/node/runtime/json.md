@@ -61,7 +61,7 @@
 
     },
   "TLC": {
-      "_nemu": {
+      "_enum": {
           "BtcCount": "u64",
           "EthCount": "u64",
           "UsdtCount": "u64",
@@ -71,7 +71,7 @@
    },
 
    "LC": {
-          "_nemu": {
+          "_enum": {
               "BtcCount": "u64",
               "EthCount": "u64",
               "UsdtCount": "u64",
