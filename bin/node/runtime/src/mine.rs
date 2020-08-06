@@ -1559,51 +1559,42 @@ impl<T: Trait> Module<T> {
 	/// 初始化昨天的挖矿算力（因为昨天的算力要作一些特殊情况的处理， 不是直接使用昨天的)
 	fn init_yesterday_total_power(block_number: T::BlockNumber){
 		// 统计今天挖矿人数
-		let count =  <LastTimeMiners<T>>::get().len() as u64;
+		let mut count =  <LastTimeMiners<T>>::get().len() as u64;
 
 		// 如果有人挖矿
 		if count != 0u64 {
+
 			MinerCount::put(count);
 			let power_info = <PowerInfoStoreItem<T>>::get_prev_power(block_number);
 			// 获取今天的总金额算力
 			let amount_power = power_info.amount_power;
-			// 获取昨天的总金额算力
+			// 获取今天的总次数算力
 			let count_power = power_info.count_power;
 
-			PowerTest::put((6u64, 6u64, amount_power, count_power));
-			// 如果平均算力小于最初平均算力  那么用最初平均算力
-			let min_amount_power = T::ZeroDayAmount::get() / INIT_MINER_COUNT * count;
-			if amount_power < min_amount_power{
-				<LastTotolAmountPowerAndMinersCount>::put((min_amount_power, count));
-			}
-			else{
-				<LastTotolAmountPowerAndMinersCount>::put((amount_power, count));
+			// 统计金额算力
+
+			// 计算昨日平均金额算力(如果低于最低要求就用最低要求的)
+			let mut av_amount_power = amount_power/count;
+			if av_amount_power < T::ZeroDayAmount::get(){
+				av_amount_power = T::ZeroDayAmount::get();
 			}
 
-			let min_count_power = T::ZeroDayCount::get() / INIT_MINER_COUNT * count;
-			if count_power < min_count_power {
-				<LastTotolCountPowerAndMinersCount>::put((min_count_power, count));
-			}
-			else{
-				<LastTotolCountPowerAndMinersCount>::put((count_power, count));
+			// 计算昨日平均次数算力（如果低于最低要求就用最低要求的)
+			let mut av_count_power = count_power/count;
+			if av_count_power < T::ZeroDayCount::get(){
+				av_count_power = T::ZeroDayCount::get();
 			}
 
-			let info1 = <LastTotolCountPowerAndMinersCount>::get();
-
-			// 如果挖矿人数小于理想挖矿人数  那么用理想挖矿人数
-			if info1.1 < INIT_MINER_COUNT{
-				<LastTotolCountPowerAndMinersCount>::put((info1.0/info1.1 * INIT_MINER_COUNT, INIT_MINER_COUNT));
+			// 如果人数低于最低要求 就用最低要求人数
+			if count < INIT_MINER_COUNT{
+				count = INIT_MINER_COUNT;
 			}
 
-			let info2 = <LastTotolAmountPowerAndMinersCount>::get();
+			// 更新昨日算力
+			<LastTotolAmountPowerAndMinersCount>::put((av_amount_power * count, count));
 
-			if info2.1 < INIT_MINER_COUNT{
-				<LastTotolAmountPowerAndMinersCount>::put((info2.0/info2.1 * INIT_MINER_COUNT, INIT_MINER_COUNT));
-			}
-
-			}
-
-
+			<LastTotolCountPowerAndMinersCount>::put((av_count_power * count, count));
+		}
 		// 删除上个周期挖矿人员名单
 		<LastTimeMiners<T>>::kill();
 	}
