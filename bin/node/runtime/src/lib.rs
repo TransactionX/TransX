@@ -103,7 +103,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 248,
+	spec_version: 2020080501,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1
@@ -164,6 +164,8 @@ impl report::Trait for Runtime {
 	type ConcilOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
 	type Event = Event;
 	type DeadOrigin = Balances;
+	type ReportSlash = Treasury;
+	type ReportSetOrigin = pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCollective>;
 
 }
 
@@ -182,6 +184,7 @@ impl register::Trait for Runtime {
 	type ChangeAddressMaxCount = ChangeAddressMaxCount;
 	type TxsMaxCount = TxsMaxCount;
 	type UnBondTime = UnBondTime;
+	type RegisterSetOrigin = pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCollective>;
 	}
 
 parameter_types! {
@@ -300,6 +303,8 @@ impl mine::Trait for Runtime {
 
 	// 钝化用到的下降指数 1.5写15 1.6写16
 	type DeclineExp = DeclineExp;
+
+	type MineSetOrigin = pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCollective>;
 
 }
 

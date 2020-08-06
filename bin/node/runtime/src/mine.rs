@@ -1,7 +1,7 @@
 //! ## Genesis config
 use frame_support::{debug,decl_storage, decl_module,decl_event, decl_error, StorageValue, StorageMap,Parameter, IterableStorageMap,
 			   weights::{Weight},Blake2_256, ensure,dispatch::Vec,traits::Currency, StorageDoubleMap, IterableStorageDoubleMap};
-use frame_support::traits::{Get, ReservableCurrency, OnUnbalanced, GetMembers, ReportedTxs};
+use frame_support::traits::{Get, ReservableCurrency, OnUnbalanced, GetMembers, ReportedTxs, EnsureOrigin};
 use frame_system as system;
 use system::{ensure_signed, ensure_root};
 use pallet_balances as balances;
@@ -173,6 +173,8 @@ pub trait Trait: balances::Trait + RegisterTrait {
 	type ZeroDayCount: Get<u64>;
 
 	type DeclineExp: Get<u64>;
+
+	type MineSetOrigin: EnsureOrigin<Self::Origin>;
 
 }
 
@@ -429,8 +431,8 @@ decl_error! {
 		/// usdt金额太小
 		AmountTooLow,
 
-		/// tx正在占用中,请稍后再试
-		TxInUsing,
+		/// tx和挖矿类型被占用
+		InUsingTxAndMinetype,
 
 		/// 正在举报队列中
 		BeingReported,
@@ -481,7 +483,9 @@ decl_module! {
         /// 设置创始人 (原则上给一个账号就可以，用于接收挖矿奖励)
 		#[weight = 50_000]
 		fn set_founders(origin, who: Vec<T::AccountId>) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			// 输入的值不能为空
 			ensure!(who.len() != 0, Error::<T>::EmptyParam);
 			<Founders<T>>::put(who);
@@ -494,7 +498,10 @@ decl_module! {
 		/// 设置个人最大的挖矿次数
 		#[weight = 50_000]
 		fn set_max_mine_count(origin, count: u64) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
 			<MiningMaxNum>::put(count);
 			Self::deposit_event(RawEvent::SetMaxMineCount);
 			Ok(())
@@ -505,7 +512,10 @@ decl_module! {
 		/// 设置单次转账金额硬顶
 		#[weight = 50_000]
 		fn set_mla(origin, amount: MLA) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
 			match amount {
 				MLA::BtcAmount(x) => <MLAbtc>::put(x),
 				MLA::UsdtAmount(x) => <MLAusdt>::put(x),
@@ -522,7 +532,10 @@ decl_module! {
 		/// 设置个人当天的金额算力硬顶
 		#[weight = 50_000]
 		fn set_la(origin, amount: LA) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
 			match amount {
 				LA::BtcAmount(x) => <LAbtc>::put(x),
 				LA::UsdtAmount(x) => <LAusdt>::put(x),
@@ -540,7 +553,9 @@ decl_module! {
 		/// 设置个人当天的次数算力硬顶
 		#[weight = 50_000]
 		fn set_lc(origin, count: LC) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			match count {
 				LC::BtcCount(x) => <LCbtc>::put(x),
 				LC::EthCount(x) => <LCeth>::put(x),
@@ -558,7 +573,9 @@ decl_module! {
 		/// 设置某个币种的次数算力硬顶(不针对个人,针对币种)
 		#[weight = 50_000]
 		fn set_tlc(origin, count: TLC) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			match count {
 				TLC::BtcCount(x) => <TLCbtc>::put(x),
 				TLC::EthCount(x) => <TLCeth>::put(x),
@@ -576,7 +593,9 @@ decl_module! {
 		/// 设置某个币种的金额算力硬顶(不针对个人,针对币种)
 		#[weight = 50_000]
 		fn set_tla(origin, amount: TLA) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			match amount {
 				TLA::BtcAmount(x) => <TLAbtc>::put(x),
 				TLA::UsdtAmount(x) => <TLAusdt>::put(x),
@@ -594,7 +613,9 @@ decl_module! {
 		/// 设置币种的最大算力占比
 		#[weight = 50_000]
 		fn set_mr(origin, percent: MR) -> DispatchResult {
-			ensure_root(origin)?;
+			T::MineSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			match percent {
 				MR::Btc(x) => <MRbtc>::put(x),
 				MR::Eth(x) => <MReth>::put(x),
@@ -626,7 +647,7 @@ decl_module! {
         	ensure!(address.clone() != to_address.clone(),Error::<T>::TransferToYourself);
         	ensure!(usdt_nums <= u64::max_value(),Error::<T>::Overfolw);  // 这个不可能溢出的
         	ensure!(usdt_nums >= 5 * USDT_DECIMALS, Error::<T>::AmountTooLow);  // 前端需要乘于100
-        	ensure!(!<TxVerifyMap>::contains_key(&(tx.clone(),mine_tag.clone())), Error::<T>::TxInUsing);
+        	ensure!(!<TxVerifyMap>::contains_key(&(tx.clone(),mine_tag.clone())), Error::<T>::InUsingTxAndMinetype);
 			{debug::info!("挖矿金额足够！")}
 
         	// 删除过期的交易tx（为了减轻存储负担）

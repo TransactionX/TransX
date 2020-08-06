@@ -120,6 +120,11 @@ pub trait Trait: balances::Trait + RegisterTrait + mine::Trait{
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	type DeadOrigin: IsDeadAccount<Self::AccountId>;
+
+	type ReportSlash: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
+	type ReportSetOrigin: EnsureOrigin<Self::Origin>;
+
 }
 
 
@@ -233,7 +238,9 @@ decl_module! {
 		/// 设置金额有关参数
 		#[weight = 500_000]
 		fn set_amount(origin, amount: ReportModuleAmount<BalanceOf<T>>) -> DispatchResult{
-			ensure_root(origin)?;
+			T::ReportSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			match amount {
 				ReportModuleAmount::ReportReserveAmount(x) => <ReportReserve<T>>::put(x),
 				ReportModuleAmount::ReportReward(x) => <ReportReward<T>>::put(x),
@@ -251,7 +258,9 @@ decl_module! {
 		/// 设置时间有关参数
 		#[weight = 500_000]
 		fn set_time(origin, time: ReportModuleTime<T::BlockNumber>) -> DispatchResult{
-			ensure_root(origin)?;
+			T::ReportSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
 			match time {
 				ReportModuleTime::ProposalExpireTime(x) => <ProposalExpire<T>>::put(x),
 				ReportModuleTime::RewardDuration(x) => <VoteRewardPeriod<T>>::put(x),
@@ -365,8 +374,8 @@ decl_module! {
 			// 归还举报者个人抵押
 			T::Currency1::unreserve(&reporter, <ReportReserve<T>>::get());
 
-			// 惩罚举报者1个token
-			T::ShouldSubOrigin::on_unbalanced(T::Currency1::slash(&reporter, <CancelReportSlash<T>>::get() ).0);
+			// 惩罚举报者1个token(这个token放到国库)
+			T::ReportSlash::on_unbalanced(T::Currency1::slash(&reporter, <CancelReportSlash<T>>::get() ).0);
             // 从正在投票的队列中删除
 			<Voting<T>>::mutate(|votes| votes.retain(|h| h.0 != tx.clone()));
 

@@ -2,7 +2,7 @@
 type BalanceOf<T> = <<T as Trait>::Currency1 as Currency<<T as system::Trait>::AccountId>>::Balance;
 use frame_support::traits::{Get,
 	Currency, ReservableCurrency, LockIdentifier,
-	WithdrawReasons, LockableCurrency,
+	WithdrawReasons, LockableCurrency, EnsureOrigin
 };
 use sp_std::{prelude::*, result::Result};
 use frame_support::{debug, ensure, decl_module, decl_storage, decl_error, decl_event, weights::{Weight},
@@ -77,6 +77,8 @@ pub trait Trait: pallet_timestamp::Trait + system::Trait{
 
 	// 解压需要的时间
 	type UnBondTime: Get<Self::BlockNumber>;
+
+	type RegisterSetOrigin: EnsureOrigin<Self::Origin>;
 }
 
 
@@ -195,7 +197,7 @@ decl_error! {
 decl_module! {
 
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		
+
 		/// 解除注册抵押金额的时间（从注销账户时候算起)
 		const UnBondTime: T::BlockNumber = T::UnBondTime::get();
 
@@ -203,7 +205,7 @@ decl_module! {
 		const ChangeAddressMaxCount: u32 = T::ChangeAddressMaxCount::get();
 
 		const TxsMaxCount: u32 = T::TxsMaxCount::get();
-		
+
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -441,9 +443,11 @@ decl_module! {
 		/// 设置注册抵押金额
 		#[weight = 500_000]
 		fn set_pledgeamount(origin, bond: BalanceOf<T>){
-			
-			ensure_root(origin)?;
-			
+
+			T::RegisterSetOrigin::try_origin(origin)
+				.map(|_| ())
+				.or_else(ensure_root)?;
+
 			<PledgeAmount<T>>::put(bond);
 			Self::deposit_event(RawEvent::SetPledgeAmount);
 
@@ -464,7 +468,7 @@ decl_event!(
 		KillRegisterEvent(AccountId),
 		WithdrawUnbond(AccountId),
 		Withdraw(AccountId),
-		SetPledgeAmount, 
+		SetPledgeAmount,
 	}
 );
 
