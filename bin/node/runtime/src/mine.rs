@@ -26,7 +26,7 @@ const MODULE_ID: ModuleId = ModuleId(*b"py/trsry");
 
 // 算力相对于金额或是次数的倍数（为了让计算更加精确）
 // 具体的算力数值大概也是金额与次数的Multiple倍
-const Multiple: u64 = 1_0000;
+pub const Multiple: u64 = 1_0000;
 
 // 第一年每天的奖励
 const FirstYearPerDayMineRewardToken: Balance = 2100_0000*DOLLARS/2/(SubHalfDuration as u128)/36525*100;
@@ -338,10 +338,10 @@ decl_storage! {
 		LastTimeMiners get(fn last_time_miners): BTreeSet<T::AccountId>;
 
 		/// 上次挖矿的金额算力与参与挖矿的矿工数（不为0的那次）
-		LastTotolAmountPowerAndMinersCount get(fn last_total_amount_power_and_miners_count): (u64, u64);
+		LastTotolAmountPowerAndMinersCount get(fn last_total_amount_power_and_miners_count): (u64, u64) = (INIT_AMOUNT_POWER * USDT_DECIMALS * INIT_COUNT_POWER * Multiple * INIT_MINER_COUNT, INIT_MINER_COUNT);
 
 		/// 上次挖矿的次数算力与参与挖矿的矿工数（不为0的那次）
-		LastTotolCountPowerAndMinersCount get(fn last_total_count_power_and_miners_count): (u64, u64);
+		LastTotolCountPowerAndMinersCount get(fn last_total_count_power_and_miners_count): (u64, u64) = (1 * INIT_COUNT_POWER * Multiple * INIT_MINER_COUNT, INIT_MINER_COUNT);
 
 		/// 个人挖矿奖励记录  (历史总金额， 最近一次的金额， 最后一次的时间)
 		CommissionAmount get(fn commission_amount): map hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, BalanceOf<T>, T::Moment);
@@ -475,6 +475,12 @@ decl_module! {
 
     	/// 创始团队成员的分润比例
     	const FoundationShareRatio: Permill = T::FoundationShareRatio::get();
+
+    	/// 每个人的初始化金额算力
+    	const ZeroDayAmount: u64 = T::ZeroDayAmount::get();
+
+    	/// 每个人的初始化次数算力
+    	const ZeroDayCount: u64 = T::ZeroDayCount::get();
 
     	type Error = Error<T>;
         fn deposit_event() = default;
@@ -973,12 +979,12 @@ impl<T: Trait> Module<T> {
 
 		// 获取昨天的总金额算力
 		let prev_total_amount = match <LastTotolAmountPowerAndMinersCount>::get().0 {
-					0u64 => T::ZeroDayAmount::get() * Multiple,
+					0u64 => T::ZeroDayAmount::get() * INIT_MINER_COUNT,
 					n @ _ => n,
 			};
 		// 获取昨天的总次数算力
 		let prev_total_count = match <LastTotolCountPowerAndMinersCount>::get().0{
-					0u64 => T::ZeroDayCount::get() * Multiple,
+					0u64 => T::ZeroDayCount::get() * INIT_MINER_COUNT,
 					n @ _ => n,
 			};
 
@@ -1415,8 +1421,8 @@ impl<T: Trait> Module<T> {
 			}
 
 			// 如果是金额算力 单次转账金额超过硬顶则用硬顶金额
-			if nums > MLA.checked_mul(Multiple).ok_or(Error::<T>::MLAError)?{
-				nums = MLA.checked_mul(Multiple).ok_or(Error::<T>::MLAError)?;
+			if nums > MLA{
+				nums = MLA
 			}
 		}
 
@@ -1566,7 +1572,7 @@ impl<T: Trait> Module<T> {
 
 			PowerTest::put((6u64, 6u64, amount_power, count_power));
 			// 如果平均算力小于最初平均算力  那么用最初平均算力
-			let min_amount_power = T::ZeroDayAmount::get() * Multiple / INIT_MINER_COUNT * count;
+			let min_amount_power = T::ZeroDayAmount::get() / INIT_MINER_COUNT * count;
 			if amount_power < min_amount_power{
 				<LastTotolAmountPowerAndMinersCount>::put((min_amount_power, count));
 			}
@@ -1574,7 +1580,7 @@ impl<T: Trait> Module<T> {
 				<LastTotolAmountPowerAndMinersCount>::put((amount_power, count));
 			}
 
-			let min_count_power = T::ZeroDayCount::get() * Multiple / INIT_MINER_COUNT * count;
+			let min_count_power = T::ZeroDayCount::get() / INIT_MINER_COUNT * count;
 			if count_power < min_count_power {
 				<LastTotolCountPowerAndMinersCount>::put((min_count_power, count));
 			}

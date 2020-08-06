@@ -86,8 +86,8 @@ pub mod symbol{
 pub mod genesis_params{
 
 	pub const  INIT_MINER_COUNT: u64 = 20; // 初始化人数
-	pub const  INIT_AMOUNT_POWER: u64 = 5000; // 初始化金额
-	pub const  INIT_COUNT_POWER: u64 = 20; // 初始化次数
+	pub const  INIT_AMOUNT_POWER: u64 = 500; // 初始化金额（单次金额算力)
+	pub const  INIT_COUNT_POWER: u64 = 20; // 初始化次数(相当于默认的挖矿次数)
 	pub const  USDT_DECIMALS: u64 = 100; // usdt精度
 
 }

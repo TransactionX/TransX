@@ -103,7 +103,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 2020080501,
+	spec_version: 2020080601,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1
@@ -245,9 +245,9 @@ parameter_types! {
 
 	pub const PerDayMinReward: Balance = 100*DOLLARS;
 
-	pub const ZeroDayAmount: u64 = INIT_AMOUNT_POWER * USDT_DECIMALS * INIT_MINER_COUNT;  // 是最小转账单位 * 每个人平均初始算力 * 20个人
+	pub const ZeroDayAmount: u64 = INIT_AMOUNT_POWER * USDT_DECIMALS * INIT_COUNT_POWER * mine::Multiple;  // 是最小转账单位 * 每个人平均初始算力 * 20个人
 
-	pub const ZeroDayCount: u64 = 1 * INIT_COUNT_POWER * INIT_MINER_COUNT;  // 假设金额是次数的20倍
+	pub const ZeroDayCount: u64 = 1 * INIT_COUNT_POWER * mine::Multiple;  // 假设金额是次数的20倍
 
 	// 这个值的范围是11～20
 	pub const DeclineExp: u64 = 12;
