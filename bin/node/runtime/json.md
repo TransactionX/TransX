@@ -287,6 +287,12 @@
     "usdt_count_power": "u64",
     "usdt_total_amount": "u64",
     "usdt_amount_power": "u64",
+    
+    "ecap_total_power": "u64",
+    "ecap_total_count": "u64",
+    "ecap_count_power": "u64",
+    "ecap_total_amount": "u64",
+    "ecap_amount_power": "u64",
     "block_number": "u64"
   },
 
@@ -317,6 +323,12 @@
     "usdt_count_power": "u64",
     "usdt_amount": "u64",
     "usdt_amount_power": "u64",
+    
+    "ecap_power": "u64",
+    "ecap_count": "u64",
+    "ecap_count_power": "u64",
+    "ecap_amount": "u64",
+    "ecap_amount_power": "u64",
     "block_number": "BlockNumber"
   },
 
