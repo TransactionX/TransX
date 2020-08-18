@@ -25,7 +25,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig,
 	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
 	StakingConfig, ElectionsConfig, IndicesConfig, SocietyConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, wasm_binary_unwrap, MineConfig, TransxCommiteeConfig, //GenericAssetConfig,
+	TechnicalCommitteeConfig, wasm_binary_unwrap, MineConfig, TransxCommiteeConfig, GenericAssetConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -235,7 +235,7 @@ pub fn testnet_genesis(
 		]
 	});
 	let num_endowed_accounts = endowed_accounts.len();
-
+	const GenericAssetBalance: Balance = 10_000 * DOLLARS;
 	const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
 	const STASH: Balance = 100 * DOLLARS;
 
@@ -301,15 +301,15 @@ pub fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 
-// 		generic_asset: Some(GenericAssetConfig{
-// 			next_asset_id: 0u32,
-// 			staking_asset_id:0u32,
-// 			spending_asset_id:0u32,
-// 			assets:vec![0,1,2],
-// 			initial_balance: GenericAssetBalance,
-// 			endowed_accounts: vec![],
-// 		}
-// 		),
+		generic_asset: Some(GenericAssetConfig{
+			next_asset_id: 0u32,
+			staking_asset_id:0u32,
+			spending_asset_id:0u32,
+			assets:vec![0,1,2],
+			initial_balance: GenericAssetBalance,
+			endowed_accounts: vec![],
+		}
+		),
 
 		pallet_contracts: Some(ContractsConfig {
 			current_schedule: pallet_contracts::Schedule {
