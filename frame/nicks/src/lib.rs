@@ -77,10 +77,11 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Sudo {
-		/// The lookup table for names.
+
+		/// 每个account_id对应的名字
 		NameOf: map hasher(blake2_128_concat) T::AccountId => Option<(Vec<u8>, BalanceOf<T>)>;
 
-		// 建立名字 => accountid 映射, 目的是为了能够从名字找到对应的accountid
+		/// 每个名字对应的account_id
 		pub AccountIdOf: map hasher(blake2_128_concat) Vec<u8> => T::AccountId;
 	}
 }
@@ -135,7 +136,6 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Reservation fee.
-		// 设置名字需要抵押吗
 		const ReservationFee: BalanceOf<T> = T::ReservationFee::get();
 
 		/// The minimum length a name may be.
@@ -171,44 +171,14 @@ decl_module! {
 			ensure!(!<AccountIdOf<T>>::contains_key(name.clone()),Error::<T>::ExistsName);
 			ensure!(!<NameOf<T>>::contains_key(&sender), Error::<T>::AlreadySetName);
 
-//			let deposit = if let Some((_, deposit)) = <NameOf<T>>::get(&sender) {
-//				Self::deposit_event(RawEvent::NameSet(sender.clone()));
-//				deposit
-//			} else {
 			let deposit = T::ReservationFee::get();
 			T::Currency_n::reserve(&sender, deposit.clone())?;
 			Self::deposit_event(RawEvent::NameChanged(sender.clone()));
-//			deposit
-//			};
 
 			<NameOf<T>>::insert(&sender, (name.clone(), deposit));
 			<AccountIdOf<T>>::insert(name.clone(), sender.clone());
 		}
 
-		/// Clear an account's name and return the deposit. Fails if the account was not named.
-		///
-		/// The dispatch origin for this call must be _Signed_.
-		///
-		/// # <weight>
-		/// - O(1).
-		/// - One balance operation.
-		/// - One storage read/write.
-		/// - One event.
-		/// # </weight>
-//		#[weight = SimpleDispatchInfo::FixedNormal(70_000)]
-//		fn clear_name(origin) {
-//			let sender = ensure_signed(origin)?;
-//
-//			let account_info = <NameOf<T>>::take(&sender).ok_or(Error::<T>::NotExistsName)?;
-//			let deposit = account_info.1;
-//			let name = account_info.0;
-//
-//			let _ = T::Currency_n::unreserve(&sender, deposit.clone());
-//
-//			<AccountIdOf<T>>::remove(name);
-//
-//			Self::deposit_event(RawEvent::NameCleared(sender, deposit));
-//		}
 
 		/// Remove an account's name and take charge of the deposit.
 		///
@@ -227,10 +197,7 @@ decl_module! {
 		// 这个方法估计是只有议会成员与root才能执行
 		// 惩罚掉并且扣除他的押金
 		fn kill_name(origin, target: <T::Lookup as StaticLookup>::Source) {
-//			T::ForceOrigin::try_origin(origin)
-//				.map(|_| ())
-//				.or_else(ensure_root)
-//				.map_err(|_| Error::<T>::BabOrigin)?;
+
 			ensure_root(origin)?;
 
 			// Figure out who we're meant to be clearing.
@@ -263,10 +230,7 @@ decl_module! {
 		// 这个方法估计是只有议会成员与root才能执行
 		// 不需要对名字长度进行检查  并且对方如果之前有命名过才会抵押他的金额 否则强制命名
 		fn force_name(origin, target: <T::Lookup as StaticLookup>::Source, name: Vec<u8>) {
-//			T::ForceOrigin::try_origin(origin)
-//				.map(|_| ())
-//				.or_else(ensure_root)
-//				.map_err(|_| Error::<T>::BabOrigin)?;
+
 			ensure_root(origin)?;
 
 			let target = T::Lookup::lookup(target)?;
