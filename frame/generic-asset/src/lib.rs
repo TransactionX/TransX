@@ -188,7 +188,7 @@ use frame_support::weights::RuntimeDbWeight;
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
 // 币的精度是14位
-pub const DOLLARS: u128 = 1000_00000_00000;
+pub const DOLLARS: u128 = 10000_00000_00000;
 
 pub mod time {
 	type BlockNumber = u32;
