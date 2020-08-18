@@ -732,20 +732,20 @@ decl_module! {
 			Self::deposit_event(RawEvent::SetAmount);
 		}
 
-	fn on_finalize(n: T::BlockNumber) {
+		fn on_finalize(n: T::BlockNumber) {
 
-		// 寻找过期的铸币议案，没有通过的就要废弃
-		Self::find_expire_mint_vote(n);
+			// 寻找过期的铸币议案，没有通过的就要废弃
+			Self::find_expire_mint_vote(n);
 
-		// 寻找通过的投票并处理
-		if (n % <MintInterval<T>>::get()).is_zero() {
-			Self::find_pass_vote_and_mint(n);
+			// 寻找通过的投票并处理
+			if (n % <MintInterval<T>>::get()).is_zero() {
+				Self::find_pass_vote_and_mint(n);
+			}
+
+			// 寻找过期的销毁币的议案并将之从队列中删除
+			// todo 这里剩下的都是还没有过的
+			Self::find_expire_burn_info(n);
 		}
-
-		// 寻找过期的销毁币的议案并将之从队列中删除
-		// todo 这里剩下的都是还没有过的
-		Self::find_expire_burn_info(n);
-	}
 
 	}
 }
