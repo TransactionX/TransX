@@ -39,9 +39,18 @@
 
   "AssetTime": {
   "_enum": {
-  "Days": "u32",
-  "Minutes": "u32",
-  "Hours": "u32"
+  "MintVoteExists": "BlockNumber",
+  "MintInterval": "BlockNumber",
+  "BurnExistsHowLong": "BlockNumber"
+  }
+  },
+
+  "AssetAmount": {
+  "_enum": {
+  "MintPledge": "Balance",
+  "BurnPledge": "Balance",
+  "MintMinAmount": "Balance",
+  "BurnMinAmount": "Balance"
   }
   },
 
@@ -287,7 +296,7 @@
     "usdt_count_power": "u64",
     "usdt_total_amount": "u64",
     "usdt_amount_power": "u64",
-    
+
     "ecap_total_power": "u64",
     "ecap_total_count": "u64",
     "ecap_count_power": "u64",
@@ -323,7 +332,7 @@
     "usdt_count_power": "u64",
     "usdt_amount": "u64",
     "usdt_amount_power": "u64",
-    
+
     "ecap_power": "u64",
     "ecap_count": "u64",
     "ecap_count_power": "u64",
