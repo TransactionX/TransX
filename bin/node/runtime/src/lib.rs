@@ -90,6 +90,10 @@ pub mod mine_linked;
 pub mod mine_power;
 pub mod report;
 
+pub mod address_valid;
+pub mod tx_valid;
+pub mod offchain_common;
+
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
@@ -218,6 +222,48 @@ parameter_types! {
 	// Additional storage item size of 32 bytes.
 	pub const DepositFactor: Balance = deposit(0, 32);
 	pub const MaxSignatories: u16 = 100;
+}
+
+impl offchain_common::BaseLocalAuthorityTrait for Runtime {
+	type AuthorityId = address_valid::address_crypto::AuthorityId;
+}
+
+impl offchain_common::AdddressValidLocalAuthorityTrait for Runtime {
+	type AuthorityId = address_valid::address_crypto::AuthorityId;
+}
+
+impl offchain_common::TxValidLocalAuthorityTrait for Runtime {
+	type AuthorityId = tx_valid::tx_crypto::AuthorityId;
+}
+
+parameter_types! {
+	pub const TxFetchNumber:BlockNumber = 10; // todo:线上改为1小时清1次
+	pub const Hour:BlockNumber = HOURS;
+}
+
+impl tx_valid::Trait for Runtime {
+	type Event = Event;
+	//	type Call = Call;
+//	type SubmitSignedTransaction = SubmitTxValidTransaction;
+//	type SubmitUnsignedTransaction = SubmitTxValidTransaction;
+//	type AuthorityId = tx_valid::tx_crypto::AuthorityId;
+	type Duration = TxFetchNumber;
+}
+
+//type SubmitAddressValidTransaction = frame_system::offchain::TransactionSubmitter<
+//	address_valid::address_crypto::AuthorityId,
+//	Runtime,
+//	UncheckedExtrinsic
+//>;
+
+impl address_valid::Trait for Runtime {
+	type Event = Event;
+	//	type Call = Call;
+//	type SubmitSignedTransaction = SubmitAddressValidTransaction;
+//	type SubmitUnsignedTransaction = SubmitAddressValidTransaction;
+//	type AuthorityId = address_valid::address_crypto::AuthorityId;
+	type Duration = TxFetchNumber;
+	type UnsignedPriority = OffchainWorkUnsignedPriority;
 }
 
 impl pallet_multisig::Trait for Runtime {
@@ -840,6 +886,7 @@ parameter_types! {
 	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 	/// We prioritize im-online heartbeats over election solution submission.
 	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
+	pub const OffchainWorkUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
 }
 
 
@@ -1073,6 +1120,9 @@ construct_runtime!(
 		Nicks: pallet_nicks::{Module, Call, Storage, Event<T>},
 		TransxCommitee: pallet_collective::<Instance3>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		GenericAsset: generic_asset::{Module, Storage, Call, Event<T>, Config<T>},
+// 		GenericAsset: generic_asset::{Module, Storage, Call, Event<T>, Config<T>},
+		TxValid: tx_valid::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		AddressValid: address_valid::{Module, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 );
 

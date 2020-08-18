@@ -23,7 +23,7 @@ use pallet_timestamp as timestamp;
 use pallet_authority_discovery as authority_discovery;
 
 use sp_runtime::{DispatchResult,DispatchError};
-use sp_io::{self, misc::print_utf8 as print_bytes};
+use sp_io::{self};
 use codec::{ Encode,Decode };
 use num_traits::float::FloatCore;
 use sp_runtime::{

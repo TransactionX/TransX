@@ -38,6 +38,7 @@ use futures::prelude::*;
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sp_core::traits::BareCryptoStorePtr;
 use node_executor::Executor;
+use node_runtime::{tx_valid,address_valid};
 
 type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
@@ -180,6 +181,7 @@ pub fn new_full_base(
 	let (
 		role, force_authoring, name, enable_grandpa, prometheus_registry,
 		client, transaction_pool, keystore,
+		dev_seed,
 	) = {
 		let sc_service::ServiceParams {
 			config, client, transaction_pool, keystore, ..
@@ -193,6 +195,7 @@ pub fn new_full_base(
 			config.prometheus_registry().cloned(),
 
 			client.clone(), transaction_pool.clone(), keystore.clone(),
+			config.dev_key_seed.clone(),
 		)
 	};
 
@@ -204,6 +207,26 @@ pub fn new_full_base(
 	let shared_voter_state = rpc_setup;
 
 	(with_startup_data)(&block_import, &babe_link);
+
+	if let Some(seed) = dev_seed.clone() {
+			keystore
+			.write()
+			.insert_ephemeral_from_seed_by_type::<tx_valid::tx_crypto::AuthorityPair>(
+				&seed,
+				tx_valid::TX_KEY_TYPE,
+			)
+			.expect("Dev Seed should always succeed.");
+
+		keystore
+			.write()
+			.insert_ephemeral_from_seed_by_type::<address_valid::address_crypto::AuthorityPair>(
+				&seed,
+				address_valid::ADDRESS_KEY_TYPE,
+			)
+			.expect("Dev Seed should always succeed.");
+	}
+
+
 
 	if let sc_service::config::Role::Authority { .. } = &role {
 		let proposer = sc_basic_authorship::ProposerFactory::new(
