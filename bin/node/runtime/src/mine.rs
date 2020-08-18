@@ -6,7 +6,7 @@ use frame_system as system;
 use system::{ensure_signed, ensure_root};
 use pallet_balances as balances;
 use sp_std::convert::{TryInto,TryFrom, Into};
-use sp_runtime::traits::{Hash, AtLeast32Bit, Bounded, One, Member, CheckedAdd, Zero, AccountIdConversion, Saturating, CheckedConversion};
+use sp_runtime::traits::{Hash, AtLeast32Bit, Bounded, One, Member, CheckedAdd, CheckedMul, CheckedDiv, Zero, AccountIdConversion, Saturating, CheckedConversion};
 use sp_runtime::{Permill, ModuleId, DispatchResult, DispatchError, Percent};
 use codec::{Encode, Decode};
 use crate::mine_linked::{PersonMineWorkForce,PersonMine,MineParm,PersonMineRecord, MineTag};
@@ -379,6 +379,15 @@ decl_storage! {
 decl_error! {
 	/// Error for the elections module.
 	pub enum Error for Module<T: Trait> {
+
+		///除以0
+		DivZero,
+
+		/// 本次算力相对平均算力过大
+		PowerTooLarge,
+
+		/// 前一天挖矿初始化错误
+		PrePowerErr,
 
 		/// 不是注册过的
 		NotRegister,
@@ -809,7 +818,9 @@ impl<T: Trait> Module<T> {
 
 		// 获取日期
 		let block_num = Self::now();
-		let now_day = block_num/T::ArchiveDuration::get();
+
+		// 归档周期不能是0
+		let now_day = block_num.checked_div(&T::ArchiveDuration::get()).ok_or(Error::<T>::DivZero)?;
 
 		let owned_mineindex = <OwnedMineIndex<T>>::get(&(sender.clone(),now_day));
 
@@ -839,7 +850,7 @@ impl<T: Trait> Module<T> {
 		// 计算总算力占比（这个占比是乘于精度过的）
 		//  结果： 真实算力占比*100亿
 		let workforce_ratio = Self::calculate_workforce_ratio(
-			amount_workforce.clone(), count_workforce.clone(), prev_total_amount.clone(), prev_total_count.clone());
+			amount_workforce.clone(), count_workforce.clone(), prev_total_amount.clone(), prev_total_count.clone())?;
 
 		let decimal = match <BalanceOf<T> as TryFrom::<u64>>::try_from(100_0000_0000u64).ok(){
 			Some(x) => x,
@@ -853,13 +864,13 @@ impl<T: Trait> Module<T> {
 			None => return Err(Error::<T>::MineCountTooMore)?,
 		};
 
-		let today_reward = Self::per_day_mine_reward_token();
+		let today_reward = Self::per_day_mine_reward_token()?;
 
 		// 计算这一次的总挖矿奖励
 		let thistime_reward = today_reward * workforce_ratio_change_into_balance/decimal;
 
         // 计算每一个人的奖励
-		let per_one_reward = Self::calculate_reward(sender.clone(), thistime_reward);
+		let per_one_reward = Self::calculate_reward(sender.clone(), thistime_reward)?;
 
 		// 奖励所有人
 		Self::reward_all_people(sender.clone(), per_one_reward.0, per_one_reward.1, per_one_reward.2, per_one_reward.3)?;
@@ -1050,23 +1061,29 @@ impl<T: Trait> Module<T> {
 	}
 
 
-	/// 计算总算力占比
+	/// 计算总算力占比(这里也附带了一个算力检查功能: 如果本次挖的算力过大, 是有可能不给挖矿的)
 	fn calculate_workforce_ratio(
 		amount_workforce: u64, count_workforce: u64, pre_amount_workfore: u64, pre_count_workforce: u64)
-		-> u64{
+		-> result::Result<u64, DispatchError>{
 
+		// 检查分母是否为0
+		if pre_amount_workfore == 0u64 || pre_count_workforce == 0u64{
+			return Err(Error::<T>::DivZero)?;
+		}
 
 		let a_sr = T::AR::get() ;  // 金额奖励占比
 		let c_sr= Permill::from_percent(100).saturating_sub(a_sr);  // 次数奖励占比
 
 		let decimal = 100_0000_0000u64;
 
-		let workforce_ratio =   (a_sr * amount_workforce  * decimal  / pre_amount_workfore) +
-			 (c_sr * count_workforce * decimal / pre_count_workforce);
+		// 这个地方的计算是有可能溢出的
+		let workforce_ratio =   (a_sr * amount_workforce.checked_mul(decimal).ok_or(Error::<T>::Overfolw)?  / pre_amount_workfore).checked_add(
+		(c_sr * count_workforce.checked_mul(decimal).ok_or(Error::<T>::Overfolw)? / pre_count_workforce))
+		.ok_or(Error::<T>::Overfolw)?;
 
 		<Ratio>::put((a_sr * amount_workforce, pre_amount_workfore,  c_sr * count_workforce, pre_count_workforce));
 
-		workforce_ratio
+		Ok(workforce_ratio)
 	}
 
 
@@ -1137,7 +1154,7 @@ impl<T: Trait> Module<T> {
 		let mut all_token_power_total = power_info.total_power;
 
 		// 总算力不一定是昨日的那个数据  因为昨日算力有可能是0
-		let total =	<LastTotolAmountPowerAndMinersCount>::get().0 + <LastTotolCountPowerAndMinersCount>::get().0;
+		let total =	<LastTotolAmountPowerAndMinersCount>::get().0.saturating_add(<LastTotolCountPowerAndMinersCount>::get().0);
 
 		if power_info.total_power < total {
 			all_token_power_total = total;
@@ -1147,31 +1164,31 @@ impl<T: Trait> Module<T> {
 
 		match symbol.clone() {
 			_ if symbol.clone() == btc => {
-				if now_tokenpower_info.btc_total_power  > <MRbtc>::get() * all_token_power_total{
+				if now_tokenpower_info.btc_total_power  >= <MRbtc>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == eth => {
-				if now_tokenpower_info.eth_total_power  > <MReth>::get() * all_token_power_total{
+				if now_tokenpower_info.eth_total_power  >= <MReth>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == usdt => {
-				if now_tokenpower_info.usdt_total_power  > <MRusdt>::get() * all_token_power_total{
+				if now_tokenpower_info.usdt_total_power  >= <MRusdt>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == eos => {
-				if now_tokenpower_info.eos_total_power  > <MReos>::get() * all_token_power_total{
+				if now_tokenpower_info.eos_total_power  >= <MReos>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
 
 			_ if symbol.clone() == ecap => {
-				if now_tokenpower_info.ecap_total_power  > <MRecap>::get() * all_token_power_total{
+				if now_tokenpower_info.ecap_total_power  >= <MRecap>::get() * all_token_power_total{
 					is_too_large = true;
 			}
 			},
@@ -1283,8 +1300,10 @@ impl<T: Trait> Module<T> {
 
 
 	/// 计算今天的挖矿奖励
-	fn per_day_mine_reward_token() -> BalanceOf<T>{
-
+	fn per_day_mine_reward_token() -> result::Result<BalanceOf<T>, DispatchError>{
+		if T::ArchiveDuration::get() == T::BlockNumber::from(0u32) {
+			return Err(Error::<T>::DivZero)?;
+		}
 		let block_num = Self::now(); // 获取区块的高度
 
 		let mut per_day_tokens = T::PerDayMinReward::get();
@@ -1293,18 +1312,19 @@ impl<T: Trait> Module<T> {
 		let useable_balance = Self::pot();
 
 		// 如果国库剩余的钱小与最小要求的奖励金额  那么用国库剩余的来计算
-		// todo 这里有点问题
 		if per_day_tokens > useable_balance{
 			// 取更小
 			per_day_tokens = useable_balance.clone();
 		}
 
-		let e: u32 = (100 * <<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(block_num).unwrap_or(u64::max_value())/(36525*SubHalfDuration*<<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(T::ArchiveDuration::get()).unwrap_or(u64::max_value()))) as u32;
+		let e: u32 = ((100 as u64).checked_mul(<<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(block_num).ok().unwrap()).ok_or(Error::<T>::Overfolw)? /((36525*SubHalfDuration).checked_mul(<<T as system::Trait>::BlockNumber as TryInto<u64>>::try_into(T::ArchiveDuration::get()).ok().unwrap()).
+		ok_or(Error::<T>::Overfolw)?)) as u32;
 
 		// 128年之后的挖矿奖励基本为0 所以这时候可以使用最低奖励了
 		if e > 32{
-			T::Currency3::make_free_balance_be(&MODULE_ID.into_account(), useable_balance - per_day_tokens.clone() + T::Currency3::minimum_balance());
+			T::Currency3::make_free_balance_be(&MODULE_ID.into_account(), useable_balance.saturating_sub(per_day_tokens.clone()) + T::Currency3::minimum_balance());
 		}
+
 		else{
 
 			let num = 2_u32.pow(e);  // 意味着e最大值是32  运行32*4 = 128年
@@ -1314,19 +1334,19 @@ impl<T: Trait> Module<T> {
 			if per_day_tokens < T::PerDayMinReward::get(){
 
 				per_day_tokens = T::PerDayMinReward::get();
-				T::Currency3::make_free_balance_be(&MODULE_ID.into_account(), useable_balance - per_day_tokens + T::Currency3::minimum_balance());
+				T::Currency3::make_free_balance_be(&MODULE_ID.into_account(), useable_balance.saturating_sub(per_day_tokens) + T::Currency3::minimum_balance());
 			}
 
 		}
 
 		<ThisDayReward<T>>::put(per_day_tokens.clone());
 
-		per_day_tokens
+		Ok(per_day_tokens)
 	}
 
 
 	/// 计算膨胀算力
-	fn inflate_power(who: T::AccountId, mine_power: u64) -> u64{  // todo 膨胀算力在计算算力之后  把膨胀算力加入到累计算力里面
+	fn inflate_power(who: T::AccountId, mine_power: u64) -> result::Result<u64, DispatchError>{  // todo 膨胀算力在计算算力之后  把膨胀算力加入到累计算力里面
 		// 把这个usdt金额数值再放大到100倍  这样计算数值的时候才能最大限度的准确
 		let mut grandpa = Permill::from_percent(0);
 		let mut father = Permill::from_percent(0);
@@ -1337,15 +1357,21 @@ impl<T: Trait> Module<T> {
 			grandpa = T::SuperiorInflationRatio::get();
 		};
 
-		let inflate_power = mine_power + father * mine_power +
-			grandpa * mine_power;
-		inflate_power
+		let inflate_power = (mine_power.checked_add(father * mine_power).ok_or(Error::<T>::Overfolw)?)
+		.checked_add(grandpa * mine_power).ok_or(Error::<T>::Overfolw)?;
+		Ok(inflate_power)
 	}
 
 
 	/// 计算本次挖矿每个人的奖励
 	fn calculate_reward(who: T::AccountId, thistime_reward: BalanceOf<T>)
-		-> (BalanceOf<T>, BalanceOf<T>, BalanceOf<T>, BalanceOf<T>){
+		-> result::Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError>{
+
+		// 分母不能是0
+		let total_portion = <MinerSharePortion >::get() + <FatherSharePortion>::get() + <SuperSharePortion>::get();
+		if  total_portion == 0u32 {
+			return Err(Error::<T>::DivZero)?;
+		}
 
 		let mut founders_total_reward = <BalanceOf<T>>::from(0);
 
@@ -1362,17 +1388,15 @@ impl<T: Trait> Module<T> {
 		let mut fa_reward = <BalanceOf<T>>::from(0u32);
 
 		if let Some(father_address) = <AllMiners<T>>::get(who.clone()).father_address{
-			// todo 这里可能存在计算panic
-			fa_reward = miner_reward_cp * <BalanceOf<T>>::from(<FatherSharePortion>::get())/<BalanceOf<T>>::from(<MinerSharePortion >::get()
-			+ <FatherSharePortion>::get() + <SuperSharePortion>::get());
+
+			fa_reward = miner_reward_cp.checked_mul(&<BalanceOf<T>>::from(<FatherSharePortion>::get())).ok_or(Error::<T>::Overfolw)? /<BalanceOf<T>>::from(total_portion);
 			miner_reward -= fa_reward.clone();
 		};
 		// 奖励上上级
 		let mut gr_reward = <BalanceOf<T>>::from(0u32);
 
 		if let Some(grandpa_address) = <AllMiners<T>>::get(who.clone()).grandpa_address{
-			gr_reward = miner_reward_cp * <BalanceOf<T>>::from(<SuperSharePortion>::get())/<BalanceOf<T>>::from(<MinerSharePortion>::get()
-			+ <FatherSharePortion>::get() + <SuperSharePortion>::get());
+			gr_reward = miner_reward_cp.checked_mul(&<BalanceOf<T>>::from(<SuperSharePortion>::get())).ok_or(Error::<T>::Overfolw)? /<BalanceOf<T>>::from(total_portion);
 			miner_reward -= gr_reward.clone();
 		};
 
@@ -1382,7 +1406,7 @@ impl<T: Trait> Module<T> {
 		// todo 用于测试
 		<ThisTimeReward<T>>::put(thistime_reward);
 
-		(miner_reward, fa_reward, gr_reward, founders_total_reward)
+		Ok((miner_reward, fa_reward, gr_reward, founders_total_reward))
 	}
 
 
@@ -1394,13 +1418,18 @@ impl<T: Trait> Module<T> {
 		// mine_tag 挖矿种类
 		// MLA 硬顶金额
 
+		// 前一天挖矿算力不能初始化成0
+		if pre_power == 0u64 {
+			return Err(Error::<T>::PrePowerErr)?;
+		}
+
 		let mut count = 0u64;
 
 		// 把金额放大Multiple倍(算力大概是金额或是次数的Multiple倍)
 		nums = nums.checked_mul(Multiple).ok_or(Error::<T>::Overfolw)?;
 
 		// 计算膨胀算力
-		nums = Self::inflate_power(who.clone(), nums);
+		nums = Self::inflate_power(who.clone(), nums)?;
 
 		// 根据挖矿种类计算算力
 		if mine_tag == MineTag::CLIENT{
@@ -1446,9 +1475,9 @@ impl<T: Trait> Module<T> {
 		// todo 测试用?
 		<FinalCalculateExceptTag>::mutate(|h| h.push((today_total_power, nums, av, n)));
 
-		// 如果倍数大于u32上限 那么就算返回平均算力
-		if n  > u32::max_value() as u64{
-			return Ok(av);
+		// 如果倍数大于10000 那么就不给了
+		if n  > 10000u64{
+			return Err(Error::<T>::PowerTooLarge)?;
 		}
 
 		// 如果不大于一倍 那么就用真实的膨胀算力
@@ -1467,6 +1496,7 @@ impl<T: Trait> Module<T> {
 		}
 
 		else{
+
 			// 如果正常情况不能处理()
 			if exp.checked_pow(n as u32).is_none(){
 
@@ -1591,9 +1621,9 @@ impl<T: Trait> Module<T> {
 			}
 
 			// 更新昨日算力
-			<LastTotolAmountPowerAndMinersCount>::put((av_amount_power * count, count));
+			<LastTotolAmountPowerAndMinersCount>::put((av_amount_power.saturating_mul(count), count));
 
-			<LastTotolCountPowerAndMinersCount>::put((av_count_power * count, count));
+			<LastTotolCountPowerAndMinersCount>::put((av_count_power.saturating_mul(count), count));
 		}
 		// 删除上个周期挖矿人员名单
 		<LastTimeMiners<T>>::kill();

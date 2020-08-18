@@ -157,7 +157,7 @@ use codec::{Decode, Encode, HasCompact, Input, Output, Error as CodecError};
 
 use sp_runtime::{RuntimeDebug, DispatchResult, DispatchError, ModuleId, traits::{AccountIdConversion}};
 use sp_runtime::traits::{
-	CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, Saturating, AtLeast32Bit, AtLeast32BitUnsigned,
+	CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, Saturating, AtLeast32Bit,
 	Zero, Bounded,
 };
 use sp_std::convert::{TryFrom, TryInto};
@@ -187,46 +187,73 @@ use frame_support::weights::RuntimeDbWeight;
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
-// 币的精度是14位
-pub const DOLLARS: u128 = 1000_00000_00000;
 
+// 这里是按照3秒一个出块  todo 目前只用于测试
 pub mod time {
 	type BlockNumber = u32;
-	pub const MINUTES: BlockNumber = 60 / 4;  // todo 这里直接3是很危险的
+	pub const MINUTES: BlockNumber = 60 / 3;  // todo 这里直接3是很危险的
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive())]
-pub enum AssetTime<BlockNumber>{
-	MintVoteExists(BlockNumber),
-	MintInterval(BlockNumber),
-	BurnExistsHowLong(BlockNumber),
+pub enum AssetTime{
+	Days(u32),
+	Minutes(u32),
+	Hours(u32),
 }
+
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive())]
-pub enum AssetAmount<Balance> {
-	MintPledge(Balance),
-	BurnPledge(Balance),
-	MintMinAmount(Balance),
-	BurnMinAmount(Balance),
+pub enum AssetChangeableParams<T, B>{
+
+	MintPledge(B),
+	BurnPledge(B),
+
+	MintMinAmount(B),
+	BurnMinAmount(B),
+
+	MintExistsHowLong(T),
+	MintPeriod(T),
+	BurnExistsHowLong(T),
+
+	MaxLenOfMint(u32),
+	MaxLenOfBurn(u32),
 
 }
 
 
 pub trait Trait: system::Trait + nicks::Trait{
 
+//	type ShouldAddOrigin: OnUnbalanced<PositiveImbalanceOf<Self>>;
+//	type ShouldSubOrigin: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
 	// 用来判断是否是议会成员
 	type CouncilMembers: Contains<Self::AccountId>;
 
 	type MembersCount: GetMembers<Self::AccountId>;
 
+	// 铸币申请需要抵押的金额
+	type MintPledge: Get<BalanceOf<Self>>;
+	// 销毁币需要抵押的金额
+	type BurnPledge: Get<BalanceOf<Self>>;
+	// 一次铸币的最小金额
+	type MintMinAmount: Get<BalanceOf<Self>>;
+	// 一次销毁币的最小金额
+	type BurnMinAmount: Get<BalanceOf<Self>>;
+	// 铸币议案存在的时间长短
+	type MintExistsHowLong: Get<Self::BlockNumber>;
+	// 铸币周期长短（多久统一铸币一次）
+	type MintPeriod: Get<Self::BlockNumber>;
+	// 销毁币的周期（多久集体销毁一次）
+	type BurnExistsHowLong: Get<Self::BlockNumber>;
+
 	type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 	type Balance: Parameter
 		+ Member
-		+ AtLeast32BitUnsigned
+		+ AtLeast32Bit
 		+ Default
 		+ Copy
 		+ MaybeSerializeDeserialize
@@ -240,6 +267,7 @@ pub trait Trait: system::Trait + nicks::Trait{
 	// transx基金会
 	type TransxFoundation: EnsureOrigin<Self::Origin, Success=Self::AccountId>;
 
+//	// 同一时间最大的铸币议案数目
 	type MaxLenOfMint: Get<u32>;
 
 	type MaxLenOfBurn: Get<u32>;
@@ -445,48 +473,48 @@ decl_error! {
 		VoteError,
 		/// 没有设置销毁币抵押金额
 		BurnPledgeNone,
-		/// 金额太少
+
+		// 金额太少
 		BondTooLow,
-		/// 队列过长
+
+		// 队列过长
 		QueueTooLong,
-		/// 已经存在的议案
+
+		// 已经存在的议案
 		ExistsProposal,
-		/// 不存在的议案
+
+		// 不存在的议案
 		NotExistsProposal,
-		/// 数目溢出错误
+
+		// 数目溢出错误
 		OverFlow,
-		/// 不存在该用户
+
+		// 不存在该用户
 		NotExistsName,
-		/// 除于0错误
+
+		// 除于0错误
 		DivZero,
+
 		/// balance转换错误
 		BalanceChangeErr,
-		/// 未知参数
-		UnknownParm,
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-
-		/// 铸币提案数量上限
-		const MaxLenOfMint: u32 = T::MaxLenOfMint::get();
-		/// 销毁币提案数量上限
-		const MaxLenOfBurn: u32 = T::MaxLenOfBurn::get();
-
 		type Error = Error<T>;
+
 		fn deposit_event() = default;
 
-
-		/// 铸币（测试阶段保留的方法)
+		/// Create a new kind of asset.
+		/// fixme 测试阶段才允许铸币（上线阶段取消这个方法)
 	 	#[weight = 500_000]
 		fn create(origin, options: AssetOptions<T::Balance, T::AccountId>) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 			Self::create_asset(None, Some(origin), options)
 		}
 
-
-		/// 转账
+		/// Transfer some liquid free balance to another account.
 		#[weight = 500_000]
 		pub fn transfer(origin, #[compact] asset_id: T::AssetId, to: T::AccountId, #[compact] amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
@@ -494,8 +522,6 @@ decl_module! {
 			Self::make_transfer_with_event(&asset_id, &origin, &to, amount)?;
 		}
 
-
-		/// 根据nicks转账
 		#[weight = 500_000]
 		pub fn transfer_by_name(origin, #[compact] asset_id: T::AssetId, to: Vec<u8>, #[compact] amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
@@ -506,7 +532,7 @@ decl_module! {
 		}
 
 
-		/// 矿工申请铸币
+		// 矿工申请铸币
 		#[weight = 500_000]
 		fn need_mint(origin, asset_id: T::AssetId, amount: T::Balance) -> DispatchResult{
 			let who = ensure_signed(origin)?;
@@ -517,7 +543,7 @@ decl_module! {
 
 			// 如果正在等待的铸币队列大于100， 则不给申请铸币
 			let tempt_queue = Self::vote_queue();
-			ensure!((tempt_queue.len() as u32) < T::MaxLenOfMint::get(), Error::<T>::QueueTooLong);
+			ensure!((tempt_queue.len() as u32) < <MaxLenOfMint>::get(), Error::<T>::QueueTooLong);
 
 			// 同一种币同一时间只能提一个议案
 			ensure!(!(<MintVoteInfo<T>>::contains_key((who.clone(), asset_id.clone()))), Error::<T>::ExistsProposal);
@@ -551,7 +577,6 @@ decl_module! {
 		}
 
 
-		/// 议会为铸币议案投票
 		#[weight = 500_000]
 		fn council_vote_for_mint(origin, who: T::AccountId, asset_id: T::AssetId, appro_or_reject: AssetVote) -> DispatchResult{
 			// 议会成员才有投票的资格
@@ -611,7 +636,6 @@ decl_module! {
 		}
 
 
-		/// 技术委员会一票否决铸币
 		#[weight = 500_000]
 		fn technical_reject_mint(origin, who: T::AccountId, asset_id: T::AssetId) -> DispatchResult{
 			// 技术委员会成员才有一票否决的资格
@@ -627,8 +651,6 @@ decl_module! {
 
 		}
 
-
-		/// 销毁币
 		#[weight = 500_000]
 		fn burn(origin, #[compact] asset_id: T::AssetId, amount: T::Balance) -> DispatchResult {
 			let to = ensure_signed(origin)?;
@@ -648,7 +670,7 @@ decl_module! {
 			// 同一时间 不能超过100个销毁申请
 			let queue = <BurnQueue<T>>::get();
 			let queue_len = queue.len() as u32;
-			ensure!(queue_len < T::MaxLenOfBurn::get(), Error::<T>::QueueTooLong);
+			ensure!(queue_len < <MaxLenOfBurn>::get(), Error::<T>::QueueTooLong);
 
 			// 销毁币金额太小 不给销毁币
 			let amount_1 = Self::balance_change_into_balanceof(amount)?;
@@ -680,8 +702,6 @@ decl_module! {
 
 		}
 
-
-		/// 基金会确认销毁币
 		#[weight = 500_000]
 		fn foundation_tag_for_burn(origin, who: T::AccountId, asset_id: T::AssetId) -> DispatchResult{
 			// 只有基金会成员才有权限
@@ -703,34 +723,42 @@ decl_module! {
 			Ok(())
 		}
 
+	// 设置可变参数
 
-		/// 设置时间相关参数
-		#[weight = 500_000]
-		fn set_time(origin, time: AssetTime<T::BlockNumber>) {
-			ensure_root(origin)?;
-			match time {
-				AssetTime::MintVoteExists(x) => <MintVoteExists<T>>::put(x),
-				AssetTime::MintInterval(x) => <MintInterval<T>>::put(x),
-				AssetTime::BurnExistsHowLong(x) => <BurnExistsHowLong<T>>::put(x),
-				_ => return Err(Error::<T>::UnknownParm)?,
-			}
-			Self::deposit_event(RawEvent::SetTime);
+	#[weight = 500_000]
+	fn set_mutable_parameter(origin, parameter: AssetChangeableParams<AssetTime, BalanceOf<T>>){
+		match parameter {
+			AssetChangeableParams::MintPledge(x) => <MintPledge<T>>::put(x),
+			AssetChangeableParams::BurnPledge(x) => <BurnPledge<T>>::put(x),
+
+			AssetChangeableParams::MaxLenOfMint(x) => <MaxLenOfMint>::put(x),
+			AssetChangeableParams::MaxLenOfBurn(x) => <MaxLenOfBurn>::put(x),
+
+			AssetChangeableParams::MintMinAmount(x) => <MintMinAmount<T>>::put(x),
+			AssetChangeableParams::BurnMinAmount(x) => <BurnMinAmount<T>>::put(x),
+
+			AssetChangeableParams::MintExistsHowLong(x) => match x {
+				AssetTime::Days(y) => <MintExistsHowLong<T>>::put(T::BlockNumber::from(y * DAYS)),
+				AssetTime::Hours(y) => <MintExistsHowLong<T>>::put(T::BlockNumber::from(y * HOURS)),
+				AssetTime::Minutes(y) => <MintExistsHowLong<T>>::put(T::BlockNumber::from(y * MINUTES)),
+			},
+
+			AssetChangeableParams::MintPeriod(x) => match x {
+				AssetTime::Days(y) => <MintPeriod<T>>::put(T::BlockNumber::from(y * DAYS)),
+				AssetTime::Hours(y) => <MintPeriod<T>>::put(T::BlockNumber::from(y * HOURS)),
+				AssetTime::Minutes(y) => <MintPeriod<T>>::put(T::BlockNumber::from(y * MINUTES)),
+			},
+
+			AssetChangeableParams::BurnExistsHowLong(x) => match x {
+				AssetTime::Days(y) => <BurnExistsHowLong<T>>::put(T::BlockNumber::from(y * DAYS)),
+				AssetTime::Hours(y) => <BurnExistsHowLong<T>>::put(T::BlockNumber::from(y * HOURS)),
+				AssetTime::Minutes(y) => <BurnExistsHowLong<T>>::put(T::BlockNumber::from(y * MINUTES)),
+			},
+
+
 		}
-
-
-		/// 设置金额相关参数
-		#[weight = 500_000]
-		fn set_amount(origin, amount: AssetAmount<BalanceOf<T>>) {
-			ensure_root(origin)?;
-			match amount {
-				AssetAmount::MintPledge(x) => <MintPledge<T>>::put(x),
-				AssetAmount::BurnPledge(x) => <BurnPledge<T>>::put(x),
-				AssetAmount::MintMinAmount(x) => <MintMinAmount<T>>::put(x),
-				AssetAmount::BurnMinAmount(x) => <BurnMinAmount<T>>::put(x),
-				_ => return Err(Error::<T>::UnknownParm)?,
-			}
-			Self::deposit_event(RawEvent::SetAmount);
-		}
+		Self::deposit_event(RawEvent::SetParamsed);
+	}
 
 		fn on_finalize(n: T::BlockNumber) {
 
@@ -738,7 +766,7 @@ decl_module! {
 			Self::find_expire_mint_vote(n);
 
 			// 寻找通过的投票并处理
-			if (n % <MintInterval<T>>::get()).is_zero() {
+			if (n % <MintPeriod<T>>::get()).is_zero() {
 				Self::find_pass_vote_and_mint(n);
 			}
 
@@ -792,48 +820,49 @@ decl_storage! {
 		/// The identity of the asset which is the one that is designated for paying the chain's transaction fee.
 		pub SpendingAssetId get(fn spending_asset_id) config(): T::AssetId;
 
-		/// 正在投票的队列（方便知道目前有多少铸币议案等待通过）
+
+		///********************自己定义的参数*****************************************************************
+		//--------------------------------------------
+		// 正在投票的队列（方便知道目前有多少铸币议案等待通过）
 		pub VoteQueue get(fn vote_queue): Vec<(T::AccountId, T::AssetId)>;
 
-		/// 当前铸币议案的具体信息
+		// 当前铸币议案的具体信息，方便查询以及投票信息及时补充（投票结束即删除）
 		pub MintVoteInfo get(fn mint_vote_info): map hasher(blake2_128_concat) (T::AccountId, T::AssetId) => Option<MintVote<T::AccountId,
 		T::AssetId, T::Balance, T::BlockNumber>>;
 
-		/// 一个二级map，用于存储所有铸币议案的最终信息（永久存储）
+		// 一个二级map，用于存储所有铸币议案的最终信息（永久存储）
 		pub MintVoteInfo2 get(fn mint_vote_info_2): double_map hasher(twox_64_concat) T::AccountId,  hasher(blake2_128_concat) T::AssetId => Vec<MintVote<
 		T::AccountId,T::AssetId, T::Balance, T::BlockNumber>>;
 
-		/// 当前等待银行打标签确认的销毁资金的议案
+		//---------------------------------------------
+		// 当前等待银行打标签的销毁资金的议案
 		pub BurnQueue get(fn mint_queue): Vec<(T::AccountId, T::AssetId)>;
 
-		/// 当前正在等待打标签的议案， 打完标签即删除（为了方便银行和基金会查看）
+		// 当前正在等待打标签的议案， 打完标签即删除（为了方便银行和基金会查看
 		pub BurnStatics get(fn burn_statisc): map hasher(blake2_128_concat) (T::AccountId, T::AssetId) => Option<BurnInfo<T::AccountId,
 		T::AssetId, T::Balance, T::BlockNumber>>;
 
-		/// 永久存储销毁议案的信息
+		// 永久存储销毁议案的信息
 		pub BurnStatics2 get(fn burn_statisc_2): double_map hasher(twox_64_concat) T::AccountId, hasher(blake2_128_concat) T::AssetId => Vec<BurnInfo<
 		T::AccountId,T::AssetId, T::Balance, T::BlockNumber>>;
 
-		/// 铸币需要抵押的金额
-		MintPledge get(fn mint_pledge): BalanceOf<T> = <BalanceOf<T> as TryFrom::<u128>>::try_from(10 * DOLLARS).ok().unwrap();
+		//********************治理参数********************************************
 
-		/// 销毁币需要抵押的金额
-		BurnPledge get(fn burn_pledge): BalanceOf<T> = <BalanceOf<T> as TryFrom::<u128>>::try_from(10 * DOLLARS).ok().unwrap();
+		MintPledge get(fn mint_pledge): BalanceOf<T>;
+		BurnPledge get(fn burn_pledge): BalanceOf<T>;
 
-		/// 铸币最小金额
-		MintMinAmount get(fn mint_min_amount): BalanceOf<T> = <BalanceOf<T> as TryFrom::<u128>>::try_from(100_0000 * DOLLARS).ok().unwrap();
+		MintMinAmount get(fn mint_min_amount): BalanceOf<T>;
+		BurnMinAmount get(fn burn_min_amount): BalanceOf<T>;
 
-		/// 销毁币最小金额
-		BurnMinAmount get(fn burn_min_amount): BalanceOf<T> = <BalanceOf<T> as TryFrom::<u128>>::try_from(100_0000 * DOLLARS).ok().unwrap();
+		MintExistsHowLong get(fn mint_exists_how_long): T::BlockNumber;
+		MintPeriod get(fn mint_period): T::BlockNumber;
+		BurnExistsHowLong get(fn burn_exists_how_long): T::BlockNumber;
 
-		/// 铸币提案存在的最长时间
-		MintVoteExists get(fn mint_exists_how_long): T::BlockNumber = T::BlockNumber::from(7 * DAYS);
+		// 同一时间允许的最大铸币议案个数
+		pub MaxLenOfMint get(fn max_len_of_mint): u32;
 
-		/// 多久集体铸币一次
-		MintInterval get(fn mint_period): T::BlockNumber = T::BlockNumber::from(1 * DAYS);
-
-		/// 销毁币提案存在的最长时间
-		BurnExistsHowLong get(fn burn_exists_how_long): T::BlockNumber = T::BlockNumber::from(7 * DAYS);
+		// 同一时间允许的最大销毁币议案个数
+		pub MaxLenOfBurn get(fn max_len_of_burn): u32;
 
 		// ******************************
 		// todo 测试专用
@@ -851,6 +880,10 @@ decl_storage! {
 		config(endowed_accounts): Vec<T::AccountId>;
 
 		build(|config: &GenesisConfig<T>| {
+
+			// 这里传入参数只是为了函数能够执行
+			<Module<T>>::initialize_mutable_parameter(&config.endowed_accounts);
+
 
 			config.assets.iter().for_each(|asset_id| {
 				config.endowed_accounts.iter().for_each(|account_id| {
@@ -886,15 +919,29 @@ decl_event!(
 		FoundationTaged,
 
 		SetParamsed,
-
-		SetTime,
-
-		SetAmount,
 	}
 );
 
 impl<T: Trait> Module<T> {
 	// PUBLIC IMMUTABLES
+
+	// 初始化治理参数
+	fn initialize_mutable_parameter(params: &[T::AccountId]){
+		<MintPledge<T>>::put(T::MintPledge::get());
+		<BurnPledge<T>>::put(T::BurnPledge::get());
+
+		<MintMinAmount<T>>::put(T::MintMinAmount::get());
+		<BurnMinAmount<T>>::put(T::BurnMinAmount::get());
+
+		<MintExistsHowLong<T>>::put(T::MintExistsHowLong::get());
+		<MintPeriod<T>>::put(T::MintPeriod::get());
+		<BurnExistsHowLong<T>>::put(T::BurnExistsHowLong::get());
+		<MaxLenOfMint>::put(T::MaxLenOfMint::get());
+		<MaxLenOfBurn>::put(T::MaxLenOfBurn::get());
+	}
+
+
+
 
 	// 寻找过期的mint投票并删除
 	// fixme 过期但是没有通过
@@ -905,8 +952,8 @@ impl<T: Trait> Module<T> {
 			|vote1| {
 				// 已经过期 并且没有通过
 				if let Some(vote) = <MintVoteInfo<T>>::get(vote1){
-					 <MintTest<T>>::put((n, vote.start_block.clone(), <MintVoteExists<T>>::get()));
-				if n - vote.start_block.clone() >= <MintVoteExists<T>>::get(){
+					 <MintTest<T>>::put((n, vote.start_block.clone(), <MintExistsHowLong<T>>::get()));
+				if n - vote.start_block.clone() >= <MintExistsHowLong<T>>::get(){
 					// 赞成票数达不到10/13
 					if (vote.approve_list.len() as u32) * 13u32 < 10u32 * Self::get_members_count() {
 						if Self::mint_last_do(vote.clone(), false).is_ok(){
@@ -944,7 +991,7 @@ impl<T: Trait> Module<T> {
 			|vote1| {
 				if let  Some(vote) = <MintVoteInfo<T>>::get(vote1){
 				// 如果已经过期(这里剩下的过期的其实都是可以铸币的）
-				if n - vote.start_block.clone() >= <MintVoteExists<T>>::get(){
+				if n - vote.start_block.clone() >= <MintExistsHowLong<T>>::get(){
 					// 这里不能终结
 					if Self::mint(vote.asset_id.clone(), vote.mint_man.clone(), vote.amount).is_ok() && Self::mint_last_do(vote.clone(), true).is_ok(){
 						false
@@ -1725,10 +1772,6 @@ impl<T: Subtrait> PartialEq for ElevatedTrait<T> {
 }
 impl<T: Subtrait> Eq for ElevatedTrait<T> {}
 impl<T: Subtrait> frame_system::Trait for ElevatedTrait<T> {
-	type BaseCallFilter = T::BaseCallFilter;
-	type MaximumExtrinsicWeight = T::MaximumBlockWeight;
-	type SystemWeightInfo = ();
-
 	type Origin = T::Origin;
 	type Call = T::Call;
 	type Index = T::Index;
@@ -1755,9 +1798,17 @@ impl<T: Subtrait> frame_system::Trait for ElevatedTrait<T> {
 
 }
 impl<T: Subtrait> Trait for ElevatedTrait<T> {
-
+//	type ShouldAddOrigin = T::ShouldAddOrigin;
+//	type ShouldSubOrigin = T::ShouldSubOrigin;
 	type CouncilMembers = T::CouncilMembers;
 	type MembersCount = T::MembersCount;
+	type MintPledge = T::MintPledge;
+	type BurnPledge = T::BurnPledge;
+	type MintMinAmount = T::MintMinAmount;
+	type BurnMinAmount = T::BurnMinAmount;
+	type MintExistsHowLong = T::MintExistsHowLong;
+	type MintPeriod = T::MintPeriod;
+	type BurnExistsHowLong = T::BurnExistsHowLong;
 	type Currency = T::Currency;
 	type Balance = T::Balance;
 	type AssetId = T::AssetId;
@@ -1782,6 +1833,14 @@ impl<T: Subtrait> nicks::Trait for ElevatedTrait<T> {
 	type MaxLength = T::MaxLength;
 }
 
+//impl<T: Subtrait> balances::Trait for ElevatedTrait<T> {
+//	type Event = ();
+//	type Balance = T::Balance;
+//	type DustRemoval = T::DustRemoval;
+//	type ExistentialDeposit = T::ExistentialDeposit;
+//	type AccountStore = T::AccountStore;
+//
+//}
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetCurrency<T, U>(sp_std::marker::PhantomData<T>, sp_std::marker::PhantomData<U>);
 

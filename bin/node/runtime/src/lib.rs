@@ -66,6 +66,7 @@ use pallet_contracts_rpc_runtime_api::ContractExecResult;
 use pallet_session::{historical as pallet_session_historical};
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
+use pallet_generic_asset as generic_asset;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -613,8 +614,8 @@ impl pallet_collective::Trait<TechnicalCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const MintExistsHowLong: BlockNumber = 10 * MINUTES;
-	pub const MintPeriod: BlockNumber = 1 * HOURS;
+	pub const MintVoteExists: BlockNumber = 10 * MINUTES;
+	pub const MintInterval: BlockNumber = 1 * HOURS;
 	pub const BurnExistsHowLong: BlockNumber = 10 * MINUTES;
 	pub const MintMinAmount: Balance = 10000 * DOLLARS;
 	pub const BurnMinAmount: Balance = 1000 * DOLLARS;
@@ -623,49 +624,33 @@ parameter_types! {
 	pub const MaxLenOfMint: u32 = 3u32;
 	pub const MaxLenOfBurn: u32  = 3u32;
 }
-// impl generic_asset::Trait for Runtime{
-//
-// //	type ShouldAddOrigin = ();
-// //	type ShouldSubOrigin = ();
-//
-// 	type CouncilMembers = Council;
-// 	// 用来获取议会成员数目的
-// 	type MembersCount = Council;
-// 	// 铸币抵押的金额
-// 	type MintPledge = MintPledge;
-// 	// 销毁币抵押金额
-// 	type BurnPledge = BurnPledge;
-// 	// 铸币最小金额
-// 	type MintMinAmount = MintMinAmount;
-// 	// 销毁币最小金额
-// 	type BurnMinAmount = BurnMinAmount;
-// 	// 铸币议案存在的最长时间
-// 	type MintExistsHowLong = MintExistsHowLong;
-// 	// 铸币议案统一处理的时间
-// 	type MintPeriod = MintPeriod;
-// 	// 销毁币议案存在的最长时间
-// 	type BurnExistsHowLong = BurnExistsHowLong;
-// 	type Currency = Balances;
-// 	type Event = Event;
-// 	type Balance = u128;
-// 	type AssetId = u32;
-// 	// 用于判断是否是议会成员
-// 	type CouncilOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-// 	// 用于判断是否是技术委员会成员
-// 	type TechnicalOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
-// 	// transx基金会
-// 	type TransxFoundation = pallet_collective::EnsureMember<AccountId, TransxFoundation>;
-//
-// 	type MaxLenOfMint  = MaxLenOfMint;
-// 	type MaxLenOfBurn =  MaxLenOfBurn;
-// 	type TreasuryId = TreasuryModuleId;
-//
-// }
+
+impl generic_asset::Trait for Runtime{
+
+	type CouncilMembers = Council;
+	type MembersCount = Council;
+	type Currency = Balances;
+	type Event = Event;
+	type Balance = u128;
+	type AssetId = u32;
+	// 用于判断是否是议会成员
+	type CouncilOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
+	// 用于判断是否是技术委员会成员
+	type TechnicalOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
+	// transx基金会
+	type TransxFoundation = pallet_collective::EnsureMember<AccountId, TransxFoundation>;
+
+	type MaxLenOfMint  = MaxLenOfMint;
+	type MaxLenOfBurn =  MaxLenOfBurn;
+	type TreasuryId = TreasuryModuleId;
+
+}
 
 parameter_types! {
 	pub const  TransxFoundationMotionDuration: BlockNumber = 5 * DAYS;
 	pub const TransxFoundationMaxProposals: u32 = 100;
 }
+
 // transx基金会
 type TransxFoundation = pallet_collective::Instance3;
 impl pallet_collective::Trait<TransxFoundation> for Runtime {  // 这个写法很特殊
@@ -1087,7 +1072,7 @@ construct_runtime!(
 		Report: report::{Module, Call, Storage, Event<T>},
 		Nicks: pallet_nicks::{Module, Call, Storage, Event<T>},
 		TransxCommitee: pallet_collective::<Instance3>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-// 		GenericAsset: generic_asset::{Module, Storage, Call, Event<T>, Config<T>},
+		GenericAsset: generic_asset::{Module, Storage, Call, Event<T>, Config<T>},
 	}
 );
 

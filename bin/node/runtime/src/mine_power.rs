@@ -70,11 +70,16 @@ impl<Storage, BlockNumber>PowerInfoStore<Storage, BlockNumber> where
         let number: u32 = chain_run_days.try_into().ok().unwrap();
         let mut power_info = Self::read(number, block_number.clone());
 
-        power_info.total_power += add_power_value;
-        power_info.total_count += add_count;
-		power_info.count_power += add_count_power;
-        power_info.total_amount += add_amount;
-		power_info.amount_power += add_amount_power;
+//         power_info.total_power += add_power_value;
+        power_info.total_power = power_info.total_power.saturating_add(add_power_value);
+//         power_info.total_count += add_count;
+        power_info.total_count = power_info.total_count.saturating_add(add_count);
+// 		power_info.count_power += add_count_power;
+		power_info.count_power = power_info.count_power.saturating_add(add_count_power);
+//         power_info.total_amount += add_amount;
+        power_info.total_amount = power_info.total_amount.saturating_add(add_amount);
+// 		power_info.amount_power += add_amount_power;
+		power_info.amount_power = power_info.amount_power.saturating_add(add_amount_power);
         power_info.block_number = block_number;
 
         Self::write(number, &power_info);
@@ -192,40 +197,65 @@ impl<Storage, BlockNumber>TokenPowerInfoStore<Storage, BlockNumber> where
 
 		match token_name{
 			BTC => {
-				token_power_info.btc_total_power += add_power;
-				token_power_info.btc_total_count += add_count;
-				token_power_info.btc_count_power += add_count_power;
-				token_power_info.btc_total_amount += add_amount;
-				token_power_info.btc_amount_power += add_amount_power;
+// 				token_power_info.btc_total_power += add_power;
+				token_power_info.btc_total_power = token_power_info.btc_total_power.saturating_add(add_power);
+// 				token_power_info.btc_total_count += add_count;
+				token_power_info.btc_total_count = token_power_info.btc_total_count.saturating_add(add_count);
+// 				token_power_info.btc_count_power += add_count_power;
+				token_power_info.btc_count_power = token_power_info.btc_count_power.saturating_add(add_count_power);
+// 				token_power_info.btc_total_amount += add_amount;
+				token_power_info.btc_total_amount = token_power_info.btc_total_amount.saturating_add(add_amount);
+// 				token_power_info.btc_amount_power += add_amount_power;
+				token_power_info.btc_amount_power = token_power_info.btc_amount_power.saturating_add(add_amount_power);
 				},
 			ETH => {
-				token_power_info.eth_total_power += add_power;
-				token_power_info.eth_total_count += add_count;
-				token_power_info.eth_count_power += add_count_power;
-				token_power_info.eth_total_amount += add_amount;
-				token_power_info.eth_amount_power += add_amount_power;
+// 				token_power_info.eth_total_power += add_power;
+				token_power_info.eth_total_power = token_power_info.eth_total_power.saturating_add(add_power);
+// 				token_power_info.eth_total_count += add_count;
+				token_power_info.eth_total_count = token_power_info.eth_total_count.saturating_add(add_count);
+// 				token_power_info.eth_count_power += add_count_power;
+				token_power_info.eth_count_power = token_power_info.eth_count_power.saturating_add(add_count_power);
+// 				token_power_info.eth_total_amount += add_amount;
+				token_power_info.eth_total_amount = token_power_info.eth_total_amount.saturating_add(add_amount);
+// 				token_power_info.eth_amount_power += add_amount_power;
+				token_power_info.eth_amount_power = token_power_info.eth_amount_power.saturating_add(add_amount_power);
 			},
 			EOS => {
-				token_power_info.eos_total_power += add_power;
-				token_power_info.eos_total_count += add_count;
-				token_power_info.eos_count_power += add_count_power;
-				token_power_info.eos_total_amount += add_amount;
-				token_power_info.eos_amount_power += add_amount_power;
+// 				token_power_info.eos_total_power += add_power;
+				token_power_info.eos_total_power = token_power_info.eos_total_power.saturating_add(add_power);
+// 				token_power_info.eos_total_count += add_count;
+				token_power_info.eos_total_count = token_power_info.eos_total_count.saturating_add(add_count);
+// 				token_power_info.eos_count_power += add_count_power;
+				token_power_info.eos_count_power = token_power_info.eos_count_power.saturating_add(add_count_power);
+// 				token_power_info.eos_total_amount += add_amount;
+				token_power_info.eos_total_amount = token_power_info.eos_total_amount.saturating_add(add_amount);
+// 				token_power_info.eos_amount_power += add_amount_power;
+				token_power_info.eos_amount_power = token_power_info.eos_amount_power.saturating_add(add_amount_power);
 			},
 			USDT => {
-				token_power_info.usdt_total_power += add_power;
-				token_power_info.usdt_total_count += add_count;
-				token_power_info.usdt_count_power += add_count_power;
-				token_power_info.usdt_total_amount += add_amount;
-				token_power_info.usdt_amount_power += add_amount_power;
+// 				token_power_info.usdt_total_power += add_power;
+				token_power_info.usdt_total_power = token_power_info.usdt_total_power.saturating_add(add_power);
+// 				token_power_info.usdt_total_count += add_count;
+				token_power_info.usdt_total_count = token_power_info.usdt_total_count.saturating_add(add_count);
+// 				token_power_info.usdt_count_power += add_count_power;
+				token_power_info.usdt_count_power = token_power_info.usdt_count_power.saturating_add(add_count_power);
+// 				token_power_info.usdt_total_amount += add_amount;
+				token_power_info.usdt_total_amount = token_power_info.usdt_total_amount.saturating_add(add_amount);
+// 				token_power_info.usdt_amount_power += add_amount_power;
+				token_power_info.usdt_amount_power = token_power_info.usdt_amount_power.saturating_add(add_amount_power);
 			},
 
 			ECAP=> {
-				token_power_info.ecap_total_power += add_power;
-				token_power_info.ecap_total_count += add_count;
-				token_power_info.ecap_count_power += add_count_power;
-				token_power_info.ecap_total_amount += add_amount;
-				token_power_info.ecap_amount_power += add_amount_power;
+// 				token_power_info.ecap_total_power += add_power;
+				token_power_info.ecap_total_power = token_power_info.ecap_total_power.saturating_add(add_power);
+// 				token_power_info.ecap_total_count += add_count;
+				token_power_info.ecap_total_count = token_power_info.ecap_total_count.saturating_add(add_count);
+// 				token_power_info.ecap_count_power += add_count_power;
+				token_power_info.ecap_count_power = token_power_info.ecap_count_power.saturating_add(add_count_power);
+// 				token_power_info.ecap_total_amount += add_amount;
+				token_power_info.ecap_total_amount = token_power_info.ecap_total_amount.saturating_add(add_amount);
+// 				token_power_info.ecap_amount_power += add_amount_power;
+				token_power_info.ecap_amount_power = token_power_info.ecap_amount_power.saturating_add(add_amount_power);
 
 			}
 
@@ -348,43 +378,68 @@ impl<Storage, AccountId, BlockNumber>MinerPowerInfoStore<Storage, AccountId, Blo
         let mut miner_power_info = Self::read(curr_point, miner_id, block_number);
 		match token_name{
 			BTC => {
-				miner_power_info.btc_power += add_power;
-				miner_power_info.btc_count += add_count;
-				miner_power_info.btc_amount += add_amount;
-				miner_power_info.btc_count_power += add_count_power;
-				miner_power_info.btc_amount_power += add_amount_power;
+// 				miner_power_info.btc_power += add_power;
+				miner_power_info.btc_power = miner_power_info.btc_power.saturating_add(add_power);
+// 				miner_power_info.btc_count += add_count;
+				miner_power_info.btc_count = miner_power_info.btc_count.saturating_add(add_count);
+// 				miner_power_info.btc_amount += add_amount;
+				miner_power_info.btc_amount = miner_power_info.btc_amount.saturating_add(add_amount);
+// 				miner_power_info.btc_count_power += add_count_power;
+				miner_power_info.btc_count_power = miner_power_info.btc_count_power.saturating_add(add_count_power);
+// 				miner_power_info.btc_amount_power += add_amount_power;
+				miner_power_info.btc_amount_power = miner_power_info.btc_amount_power.saturating_add(add_amount_power);
 			},
 
 			ETH => {
-				miner_power_info.eth_power += add_power;
-				miner_power_info.eth_count += add_count;
-				miner_power_info.eth_amount += add_amount;
-				miner_power_info.eth_count_power += add_count_power;
-				miner_power_info.eth_amount_power += add_amount_power;
+// 				miner_power_info.eth_power += add_power;
+				miner_power_info.eth_power = miner_power_info.eth_power.saturating_add(add_power);
+// 				miner_power_info.eth_count += add_count;
+				miner_power_info.eth_count = miner_power_info.eth_count.saturating_add(add_count);
+// 				miner_power_info.eth_amount += add_amount;
+				miner_power_info.eth_amount = miner_power_info.eth_amount.saturating_add(add_amount);
+// 				miner_power_info.eth_count_power += add_count_power;
+				miner_power_info.eth_count_power = miner_power_info.eth_count_power.saturating_add(add_count_power);
+// 				miner_power_info.eth_amount_power += add_amount_power;
+				miner_power_info.eth_amount_power = miner_power_info.eth_amount_power.saturating_add(add_amount_power);
 			},
 
 			EOS => {
-				miner_power_info.eos_power += add_power;
-				miner_power_info.eos_count += add_count;
-				miner_power_info.eos_amount += add_amount;
-				miner_power_info.eos_count_power += add_count_power;
-				miner_power_info.eos_amount_power += add_amount_power;
+// 				miner_power_info.eos_power += add_power;
+				miner_power_info.eos_power = miner_power_info.eos_power.saturating_add(add_power);
+// 				miner_power_info.eos_count += add_count;
+				miner_power_info.eos_count = miner_power_info.eos_count.saturating_add(add_count);
+// 				miner_power_info.eos_amount += add_amount;
+				miner_power_info.eos_amount = miner_power_info.eos_amount.saturating_add(add_amount);
+// 				miner_power_info.eos_count_power += add_count_power;
+				miner_power_info.eos_count_power = miner_power_info.eos_count_power.saturating_add(add_count_power);
+// 				miner_power_info.eos_amount_power += add_amount_power;
+				miner_power_info.eos_amount_power = miner_power_info.eos_amount_power.saturating_add(add_amount_power);
 			},
 
 			USDT => {
-				miner_power_info.usdt_power += add_power;
-				miner_power_info.usdt_count += add_count;
-				miner_power_info.usdt_amount += add_amount;
-				miner_power_info.usdt_count_power += add_count_power;
-				miner_power_info.usdt_amount_power += add_amount_power;
+// 				miner_power_info.usdt_power += add_power;
+				miner_power_info.usdt_power = miner_power_info.usdt_power.saturating_add(1);
+// 				miner_power_info.usdt_count += add_count;
+				miner_power_info.usdt_count = miner_power_info.usdt_count.saturating_add(1);
+// 				miner_power_info.usdt_amount += add_amount;
+				miner_power_info.usdt_amount = miner_power_info.usdt_amount.saturating_add(1);
+// 				miner_power_info.usdt_count_power += add_count_power;
+				miner_power_info.usdt_count_power = miner_power_info.usdt_count_power.saturating_add(1);
+// 				miner_power_info.usdt_amount_power += add_amount_power;
+				miner_power_info.usdt_amount_power = miner_power_info.usdt_amount_power.saturating_add(1);
 			},
 
 			ECAP => {
-				miner_power_info.ecap_power += add_power;
-				miner_power_info.ecap_count += add_count;
-				miner_power_info.ecap_amount += add_amount;
-				miner_power_info.ecap_count_power += add_count_power;
-				miner_power_info.ecap_amount_power += add_amount_power;
+// 				miner_power_info.ecap_power += add_power;
+				miner_power_info.ecap_power = miner_power_info.ecap_power.saturating_add(add_power);
+// 				miner_power_info.ecap_count += add_count;
+				miner_power_info.ecap_count = miner_power_info.ecap_count.saturating_add(add_count);
+// 				miner_power_info.ecap_amount += add_amount;
+				miner_power_info.ecap_amount = miner_power_info.ecap_amount.saturating_add(add_amount);
+// 				miner_power_info.ecap_count_power += add_count_power;
+				miner_power_info.ecap_count_power = miner_power_info.ecap_count_power.saturating_add(add_count_power);
+// 				miner_power_info.ecap_amount_power += add_amount_power;
+				miner_power_info.ecap_amount_power = miner_power_info.ecap_amount_power.saturating_add(add_amount_power);
 			}
 			_ => {
 			return Err("Unsupported token")
@@ -393,11 +448,16 @@ impl<Storage, AccountId, BlockNumber>MinerPowerInfoStore<Storage, AccountId, Blo
 		}
 
 
-		miner_power_info.total_power += add_power;
-		miner_power_info.total_count += add_count;
-		miner_power_info.total_amount += add_amount;
-		miner_power_info.count_power += add_count_power;
-		miner_power_info.amount_power += add_amount_power;
+// 		miner_power_info.total_power += add_power;
+		miner_power_info.total_power = miner_power_info.total_power.saturating_add(add_power);
+// 		miner_power_info.total_count += add_count;
+		miner_power_info.total_count = miner_power_info.total_count.saturating_add(add_count);
+// 		miner_power_info.total_amount += add_amount;
+		miner_power_info.total_amount = miner_power_info.total_amount.saturating_add(add_amount);
+// 		miner_power_info.count_power += add_count_power;
+		miner_power_info.count_power = miner_power_info.count_power.saturating_add(add_count_power);
+// 		miner_power_info.amount_power += add_amount_power;
+		miner_power_info.amount_power = miner_power_info.amount_power.saturating_add(add_amount_power);
 
         miner_power_info.block_number = block_number.clone();
 
