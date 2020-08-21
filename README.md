@@ -7,7 +7,6 @@
 
 ![Transx](https://avatars3.githubusercontent.com/u/58466741?s=400&u=b0649e38ddfc99730b975a5bdd0fa64f5324c49d&v=4)
 
-
 ## Introduction
 
    * Digital currency aggregation payment platform.
