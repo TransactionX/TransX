@@ -1,8 +1,5 @@
 # Transx &middot; [![GitHub license](https://img.shields.io/badge/license-GPL3%2FApache2-blue)](LICENSE) [![GitLab Status](https://gitlab.parity.io/parity/substrate/badges/master/pipeline.svg)](https://gitlab.parity.io/parity/substrate/pipelines) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](docs/CONTRIBUTING.adoc)
 
-<p align="center">
-  <img src="/docs/media/sub.gif">
-</p>
 
 ![Transx](https://avatars3.githubusercontent.com/u/58466741?s=400&u=b0649e38ddfc99730b975a5bdd0fa64f5324c49d&v=4)
 
@@ -14,11 +11,11 @@
 
 ## Building
 
-* Install Rust
+* Install Rust  
     `curl https://sh.rustup.rs -sSf | sh`
     `rustup default stable`
 
-* Install all the required dependencies with a single command.
+* Install all the required dependencies with a single command.  
     `curl https://getsubstrate.io -sSf | bash -s -- --fast`
 
 * Wasm Compilation
@@ -28,7 +25,7 @@
     ```
     >>> Transx uses WebAssembly (Wasm), and you will need to configure your Rust compiler to use nightly to support this build target.
 
-* Rustup Update
+* Rustup Update  
     `rustup update`
     >>> Transx always uses the latest version of Rust stable and nightly for compilation. ensure your Rust compiler is always up to date
 
@@ -38,10 +35,10 @@
     `./target/release/transx --chain=sword`
     >>> Up to now, we only start the testnet.
 
-* Run as dev.
-    Remove the db
-    `./target/release/transx purge-chain --dev`
-    Start a development chain
+* Run as dev.  
+    Remove the db  
+    `./target/release/transx purge-chain --dev`  
+    Start a development chain  
     `./target/release/transx --dev`
 * Run as local
     If you want to see the multi-node consensus algorithm in action locally, then you can create a local testnet with two validator nodes for Alice and Bob, who are the initial authorities of the genesis chain that have been endowed with testnet units.
