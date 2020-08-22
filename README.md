@@ -12,7 +12,7 @@
 ## Building
 
 * Install Rust  
-    `curl https://sh.rustup.rs -sSf | sh`
+    `curl https://sh.rustup.rs -sSf | sh`  
     `rustup default stable`
 
 * Install all the required dependencies with a single command.  
