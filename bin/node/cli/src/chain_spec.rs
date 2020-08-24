@@ -65,30 +65,30 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![
 
 		( //5H13XJ1vYup8MJj2KpiEUjrdvUT1X9Pkp2oLUwopK7Djttt3
-		hex!["da62631cad1cc9413134039f644b4be5d78246153667196a5f995cc6ea3f0329"].into(),
+		hex!["36df07c6972a58f8b13837019a119b74373e17ae30f654c288446564cc625055"].into(),
 		// 5FNQSa4K7k5XvD768QQjwykbjqF3eK5PfyPKAjNBzQ6hJqHq
-		hex!["92347decfd0c4fd700a8a825c50b506e8f04565125687bb0cc729a072382ff6f"].into(),
+		hex!["2a69db9b03837c9af7ed9911192ac0086c54c686b6c0f715ae7551875b97a80b"].into(),
 		// 5GiC6YDxXEggvdcS8cMcNgwRkHBtUmjkAnR5dwWLGvTkrEgC
-		hex!["cd881340df6115f68b633279dd1f273fac62674aa6c380c79f70120827e37332"].unchecked_into(),
+		hex!["04d2f61f6b1d345ec20da1d621eec61608c4dcc9ae781a61242bfaa35fdb2e0c"].unchecked_into(),
 		// 5ExtcN2V7W4BSZBVZtc893tFuahKRxoNRauZytnjEc35mF6a
-		hex!["80456d4cb4327657040689d83b82e3bd19c322da678f158e7d8ed4c6b481f008"].unchecked_into(),
+		hex!["0c186230ee3f811c4dee4ffd726493ada0bcc711b8e33de3eb113399fad5b479"].unchecked_into(),
 		// 5ExtcN2V7W4BSZBVZtc893tFuahKRxoNRauZytnjEc35mF6a
-		hex!["80456d4cb4327657040689d83b82e3bd19c322da678f158e7d8ed4c6b481f008"].unchecked_into(),
+		hex!["6af7ad3384a8f993380c598fed1454cb48e407351600a8eb4c3c3422c76a4375"].unchecked_into(),
 		// 5ExtcN2V7W4BSZBVZtc893tFuahKRxoNRauZytnjEc35mF6a
-		hex!["80456d4cb4327657040689d83b82e3bd19c322da678f158e7d8ed4c6b481f008"].unchecked_into(),
+		hex!["267469f51b398a619b8451a789564d65a3256955d72242f8ae8354a989e65e11"].unchecked_into(),
 	),(
 		// 5HgR7eXnMLjJUmD4udaZPebnaS23xtkBcMDjrfxxKjCnnNAM
-		hex!["f869a4e4133f17dd8807480731faa86bd6415862ad879df5c0dbe1da9eb1182f"].into(),
+		hex!["44f68ed065555550c5f6e46a8883d12b479ab9a969143b9833e4e4d8aae21d3e"].into(),
 		// 5E2fPwLypdLEfZfGsGiLnMBXwMJwGrDjUG5PGdV25uricyph
-		hex!["56e9b1299df1145fe44780979c2ce8776752d96212a70b31c183edd6c094244e"].into(),
+		hex!["4cb14cb42837abb6fbe170b4bb7ba312a999df20ed622d796c761fa9cc97e218"].into(),
 		// 5DCQWGgi1u4Prhu6uQr2CiQTvEoo2eayenk7oJ2Xmmci4vPZ
-		hex!["321bc92514f9b59dec65644d5e01411d315541ca73b1ae8970b799a831a2a5ee"].unchecked_into(),
+		hex!["c4a861a234f8339835245c15f28ea9c20b372bb9a816c4672d04bcbd73e939cc"].unchecked_into(),
 		// 5H4NcpqS7LAAfKt8D77WgNL3ddUTFxT1axbpmnXD5JEDcfdH
-		hex!["dcec6773b54186ed5a4010d691fa5a7ffe192b13ba171cd72d43cbc230691051"].unchecked_into(),
+		hex!["f82b4d6b7b35fed3832f1ca7c962914d8951e5fb4ffffdd43d51e81c16dff06c"].unchecked_into(),
 		// 5H4NcpqS7LAAfKt8D77WgNL3ddUTFxT1axbpmnXD5JEDcfdH
-		hex!["dcec6773b54186ed5a4010d691fa5a7ffe192b13ba171cd72d43cbc230691051"].unchecked_into(),
+		hex!["2884429144a7db339a6663c3ea3ab96b4f36debbe1d0f722fc10764b4cbae564"].unchecked_into(),
 		// 5H4NcpqS7LAAfKt8D77WgNL3ddUTFxT1axbpmnXD5JEDcfdH
-		hex!["dcec6773b54186ed5a4010d691fa5a7ffe192b13ba171cd72d43cbc230691051"].unchecked_into(),
+		hex!["4a027258265d673e28b080980ad5793832b4d87a7b2f346ba04debd33dab9d6d"].unchecked_into(),
 	)];
 
 	// 用hex就可以解决(这个要用自定义的)
@@ -109,7 +109,7 @@ pub fn staging_testnet_config() -> ChainSpec {
 
 	let boot_nodes = vec![
 		// 自己的阿里云服务器
-		String::from("/ip4/47.106.196.14/tcp/30333/p2p/12D3KooWJZ9kMfN6W3hnY4cygsvuwLBd1LzmQiTKk7jiuvBaL1qP").try_into().unwrap(),
+		String::from("/ip4/47.106.196.14/tcp/30333/p2p/12D3KooWMutoAuM5TrpcsiVUSfnCEcKsbAPZr9PmZSqwiFsmD6MX").try_into().unwrap(),
 
 	];
 
