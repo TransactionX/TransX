@@ -41,7 +41,7 @@
 再次查看`./target/release/subkey`
 ***
 ## 4.生成raw文件
-`./target/release/transx build-spec --chain=staging > localspec.json`
+`./target/release/transx build-spec --chain=sword > localspec.json`
 `./target/release/transx build-spec --chain localspec.json --raw > customspec.json`
 >>> raw文件用于启动节点，是根据`chain_spec.rs`文件生成的, 不能更改项目chain_spec.rs中的代码，要不然会导致生成的raw文件hash值不一致，从而启动节点失败.
 ***
