@@ -11,34 +11,29 @@
 
 ## Building
 
-* Install Rust  
-    `curl https://sh.rustup.rs -sSf | sh`  
-    `rustup default stable`
+* Install Rust
+    `curl https://sh.rustup.rs -sSf | sh`
 
-* Install all the required dependencies with a single command.  
+* Install all the required dependencies with a single command.
     `curl https://getsubstrate.io -sSf | bash -s -- --fast`
 
 * Wasm Compilation
     ```buildoutcfg
-    rustup update nightly
-    rustup target add wasm32-unknown-unknown --toolchain nightly
+    rustup install nightly-2020-03-09
+    rustup default nightly-2020-03-09-x86_64-unknown-linux-gnu
+    rustup target add wasm32-unknown-unknown --toolchain nightly-2020-03-09-x86_64-unknown-linux-gnu
     ```
-    >>> Transx uses WebAssembly (Wasm), and you will need to configure your Rust compiler to use nightly to support this build target.
-
-* Rustup Update  
-    `rustup update`
-    >>> Transx always uses the latest version of Rust stable and nightly for compilation. ensure your Rust compiler is always up to date
 
 ## NetWork
 * Connect to sword(test network).
 
-    `./target/release/transx --chain=sword`
+    `./target/release/transx --chain=sword.json`
     >>> Up to now, we only start the testnet.
 
-* Run as dev.  
-    Remove the db  
-    `./target/release/transx purge-chain --dev`  
-    Start a development chain  
+* Run as dev.
+    Remove the db
+    `./target/release/transx purge-chain --dev`
+    Start a development chain
     `./target/release/transx --dev`
 * Run as local
     If you want to see the multi-node consensus algorithm in action locally, then you can create a local testnet with two validator nodes for Alice and Bob, who are the initial authorities of the genesis chain that have been endowed with testnet units.
