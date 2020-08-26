@@ -340,6 +340,10 @@ decl_module! {
 
 			<BeingReportedTxsOf<T>>::mutate(illegalman.clone(), |h| h.insert(tx.clone()));
 
+			if Self::is_concil_member(who.clone())	{
+				Self::judge(tx.clone(), vote_info.clone());
+			}
+
 			Self::deposit_event(RawEvent::ReportEvent(start_vote_block, illegalman));
 			Ok(())
 		}
@@ -449,38 +453,10 @@ decl_module! {
 					voting.approve_mans.swap_remove(pos);
 				}
 			}
+
 			<Votes<T>>::insert(tx.clone(), voting.clone());
-			// 判断议案是否结束
-			let vote_result = Self::vote_result(voting.clone());
-			// 如果议案投票已经结束
-			if vote_result.0 == VoteResult::PASS{
 
-				// 把该投票结果存储到奖励名单
-				<RewardList<T>>::mutate(|a| a.push(voting.clone()));
-				Self::remove_mantxhashs(reporter.clone(),tx.clone());
-				Self::remove_mantxhashs(illegalman.clone(),tx.clone());
-				Self::deposit_event(RawEvent::RemoveManTxhashs(who.clone(), illegalman.clone()));
-				// 如果作弊是真  把名字加入黑名单  并且从注册列表中删除  把该投票信息保存
-				if vote_result.1 == IsPunished::YES{
-
-					// 先于奖励加入黑名单
-					<BlackList<T>>::insert(illegalman.clone(), tx.clone());
-					Self::kill_register(illegalman.clone());
-					Self::deposit_event(RawEvent::KillRegisterEvent(illegalman.clone()));
-
-					// 永久保存该投票信息
-					<AllPunishmentInfo<T>>::insert(tx.clone(), voting.clone());
-				}
-
-				// 从正在投票队列中移除
-				Self::remove_voting(tx.clone())
-			}
-
-			else{
-				// 修改正在投票的队列
-				<Voting<T>>::mutate(|votes| votes.retain(|h| h.0 != tx));
-				<Voting<T>>::mutate(|votes| votes.push((tx.clone(), voting.clone())));
-			}
+			Self::judge(tx.clone(), voting.clone());
 
 			Self::deposit_event(RawEvent::VoteEvent(illegalman.clone()));
 			Ok(())
@@ -552,6 +528,46 @@ impl<T: Trait> Module <T> {
 
 	pub fn remove_voting(tx: Vec<u8>){
 		<Voting<T>>::mutate(|votes| votes.retain(|h| h.0 != tx.clone()));
+	}
+
+
+	/// 判断投票是否结束 并执行相应操作
+	pub fn judge(tx: Vec<u8>, voting: VoteInfo<T::BlockNumber, T::AccountId, T::Balance>){
+
+		let illegalman = voting.illegal_man.clone();
+		let reporter = voting.reporter.clone();
+
+		// 判断议案是否结束
+		let vote_result = Self::vote_result(voting.clone());
+		// 如果议案投票已经结束
+		if vote_result.0 == VoteResult::PASS{
+
+			// 把该投票结果存储到奖励名单
+			<RewardList<T>>::mutate(|a| a.push(voting.clone()));
+			Self::remove_mantxhashs(reporter.clone(),tx.clone());
+			Self::remove_mantxhashs(illegalman.clone(),tx.clone());
+			Self::deposit_event(RawEvent::RemoveManTxhashs(reporter.clone(), illegalman.clone()));
+			// 如果作弊是真  把名字加入黑名单  并且从注册列表中删除  把该投票信息保存
+			if vote_result.1 == IsPunished::YES{
+
+				// 先于奖励加入黑名单
+				<BlackList<T>>::insert(illegalman.clone(), tx.clone());
+				Self::kill_register(illegalman.clone());
+				Self::deposit_event(RawEvent::KillRegisterEvent(illegalman.clone()));
+
+				// 永久保存该投票信息
+				<AllPunishmentInfo<T>>::insert(tx.clone(), voting.clone());
+			}
+
+			// 从正在投票队列中移除
+			Self::remove_voting(tx.clone())
+		}
+
+		else{
+			// 修改正在投票的队列
+			<Voting<T>>::mutate(|votes| votes.retain(|h| h.0 != tx));
+			<Voting<T>>::mutate(|votes| votes.push((tx.clone(), voting.clone())));
+		}
 	}
 
 

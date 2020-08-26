@@ -56,7 +56,7 @@ if __name__ == "__main__":
 			j = i.split()[1].strip()
 			os.system("kill -9 " + j)
 
-	os.system(r"./substrate build-spec --chain=staging > localspec.json ")
+	os.system(r"./substrate build-spec --chain=sword > localspec.json ")
 	# import re
 	#
 	# a = None

@@ -1,31 +1,14 @@
-// Copyright 2018-2020 Parity Technologies (UK) Ltd.
-// This file is part of Substrate.
-
-// Substrate is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// Substrate is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
-
-//! Substrate chain configurations.
 
 use sc_chain_spec::ChainSpecExtension;
 use serde_json::map::Map;
+use std::convert::TryInto;
 use sp_core::{Pair, Public, crypto::UncheckedInto, sr25519};
 use serde::{Serialize, Deserialize};
 use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig,
 	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
 	StakingConfig, ElectionsConfig, IndicesConfig, SocietyConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, MineConfig, TransxCommiteeConfig, GenericAssetConfig,
-	wasm_binary_unwrap,
+	TechnicalCommitteeConfig, wasm_binary_unwrap, MineConfig, TransxCommiteeConfig, GenericAssetConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -47,7 +30,7 @@ const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Node `ChainSpec` extensions.
 ///
-/// Additional parameters for some Substrate core modules,
+/// Additional parameters for some Transx core modules,
 /// customizable from the chain spec.
 #[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
 #[serde(rename_all = "camelCase")]
@@ -78,85 +61,38 @@ fn session_keys(
 }
 
 fn staging_testnet_config_genesis() -> GenesisConfig {
-	// stash, controller, session-key
-	// generated with secret:
-	// for i in 1 2 3 4 ; do for j in stash controller; do subkey inspect "$secret"/fir/$j/$i; done; done
-	// and
-	// for i in 1 2 3 4 ; do for j in session; do subkey --ed25519 inspect "$secret"//fir//$j//$i; done; done
-
+	// todo 初始化验证人是否给两个就行
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![
-		authority_keys_from_seed("Alice"),
-		authority_keys_from_seed("Bob"),
-		authority_keys_from_seed("Charlie"),
-		authority_keys_from_seed("Dave"),
-		authority_keys_from_seed("Eve"),
-		authority_keys_from_seed("Ferdie"),
-		];
-		// 5Fbsd6WXDGiLTxunqeK5BATNiocfCqu9bS1yArVjCgeBLkVy
-//		hex!["9c7a2ee14e565db0c69f78c7b4cd839fbf52b607d867e9e9c5a79042898a0d12"].into(),
-//		// 5EnCiV7wSHeNhjW3FSUwiJNkcc2SBkPLn5Nj93FmbLtBjQUq
-//		hex!["781ead1e2fa9ccb74b44c19d29cb2a7a4b5be3972927ae98cd3877523976a276"].into(),
-//		// 5Fb9ayurnxnaXj56CjmyQLBiadfRCqUbL2VWNbbe1nZU6wiC
-//		hex!["9becad03e6dcac03cee07edebca5475314861492cdfc96a2144a67bbe9699332"].unchecked_into(),
-//		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-//		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-//		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-//		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-//		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-//		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-//	),(
-//		// 5ERawXCzCWkjVq3xz1W5KGNtVx2VdefvZ62Bw1FEuZW4Vny2
-//		hex!["68655684472b743e456907b398d3a44c113f189e56d1bbfd55e889e295dfde78"].into(),
-//		// 5Gc4vr42hH1uDZc93Nayk5G7i687bAQdHHc9unLuyeawHipF
-//		hex!["c8dc79e36b29395413399edaec3e20fcca7205fb19776ed8ddb25d6f427ec40e"].into(),
-//		// 5EockCXN6YkiNCDjpqqnbcqd4ad35nU4RmA1ikM4YeRN4WcE
-//		hex!["7932cff431e748892fa48e10c63c17d30f80ca42e4de3921e641249cd7fa3c2f"].unchecked_into(),
-//		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-//		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-//		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-//		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-//		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-//		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-//	),(
-//		// 5DyVtKWPidondEu8iHZgi6Ffv9yrJJ1NDNLom3X9cTDi98qp
-//		hex!["547ff0ab649283a7ae01dbc2eb73932eba2fb09075e9485ff369082a2ff38d65"].into(),
-//		// 5FeD54vGVNpFX3PndHPXJ2MDakc462vBCD5mgtWRnWYCpZU9
-//		hex!["9e42241d7cd91d001773b0b616d523dd80e13c6c2cab860b1234ef1b9ffc1526"].into(),
-//		// 5E1jLYfLdUQKrFrtqoKgFrRvxM3oQPMbf6DfcsrugZZ5Bn8d
-//		hex!["5633b70b80a6c8bb16270f82cca6d56b27ed7b76c8fd5af2986a25a4788ce440"].unchecked_into(),
-//		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-//		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-//		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-//		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-//		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-//		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-//	),(
-//		// 5HYZnKWe5FVZQ33ZRJK1rG3WaLMztxWrrNDb1JRwaHHVWyP9
-//		hex!["f26cdb14b5aec7b2789fd5ca80f979cef3761897ae1f37ffb3e154cbcc1c2663"].into(),
-//		// 5EPQdAQ39WQNLCRjWsCk5jErsCitHiY5ZmjfWzzbXDoAoYbn
-//		hex!["66bc1e5d275da50b72b15de072a2468a5ad414919ca9054d2695767cf650012f"].into(),
-//		// 5DMa31Hd5u1dwoRKgC4uvqyrdK45RHv3CpwvpUC1EzuwDit4
-//		hex!["3919132b851ef0fd2dae42a7e734fe547af5a6b809006100f48944d7fae8e8ef"].unchecked_into(),
-//		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-//		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-//		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-//		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-//		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-//		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-//	)];
 
-	// generated with secret: subkey inspect "$secret"/fir
-//	let root_key: AccountId = hex![
-//		// 5Ff3iXP75ruzroPWRP2FYBHWnmGGBSb63857BgnzCoXNxfPo
-//		"9ee5e5bdc0ec239eb164f865ecc345ce4c88e76ee002e0f7e318097347471809"
-//	].into();
-	let root_key: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
+		( //5H13XJ1vYup8MJj2KpiEUjrdvUT1X9Pkp2oLUwopK7Djttt3
+		hex!["36df07c6972a58f8b13837019a119b74373e17ae30f654c288446564cc625055"].into(),
+		// 5FNQSa4K7k5XvD768QQjwykbjqF3eK5PfyPKAjNBzQ6hJqHq
+		hex!["2a69db9b03837c9af7ed9911192ac0086c54c686b6c0f715ae7551875b97a80b"].into(),
+		// 5GiC6YDxXEggvdcS8cMcNgwRkHBtUmjkAnR5dwWLGvTkrEgC
+		hex!["04d2f61f6b1d345ec20da1d621eec61608c4dcc9ae781a61242bfaa35fdb2e0c"].unchecked_into(),
+		// 5ExtcN2V7W4BSZBVZtc893tFuahKRxoNRauZytnjEc35mF6a
+		hex!["0c186230ee3f811c4dee4ffd726493ada0bcc711b8e33de3eb113399fad5b479"].unchecked_into(),
+		// 5ExtcN2V7W4BSZBVZtc893tFuahKRxoNRauZytnjEc35mF6a
+		hex!["6af7ad3384a8f993380c598fed1454cb48e407351600a8eb4c3c3422c76a4375"].unchecked_into(),
+		// 5ExtcN2V7W4BSZBVZtc893tFuahKRxoNRauZytnjEc35mF6a
+		hex!["267469f51b398a619b8451a789564d65a3256955d72242f8ae8354a989e65e11"].unchecked_into(),
+	),(
+		// 5HgR7eXnMLjJUmD4udaZPebnaS23xtkBcMDjrfxxKjCnnNAM
+		hex!["44f68ed065555550c5f6e46a8883d12b479ab9a969143b9833e4e4d8aae21d3e"].into(),
+		// 5E2fPwLypdLEfZfGsGiLnMBXwMJwGrDjUG5PGdV25uricyph
+		hex!["4cb14cb42837abb6fbe170b4bb7ba312a999df20ed622d796c761fa9cc97e218"].into(),
+		// 5DCQWGgi1u4Prhu6uQr2CiQTvEoo2eayenk7oJ2Xmmci4vPZ
+		hex!["c4a861a234f8339835245c15f28ea9c20b372bb9a816c4672d04bcbd73e939cc"].unchecked_into(),
+		// 5H4NcpqS7LAAfKt8D77WgNL3ddUTFxT1axbpmnXD5JEDcfdH
+		hex!["f82b4d6b7b35fed3832f1ca7c962914d8951e5fb4ffffdd43d51e81c16dff06c"].unchecked_into(),
+		// 5H4NcpqS7LAAfKt8D77WgNL3ddUTFxT1axbpmnXD5JEDcfdH
+		hex!["2884429144a7db339a6663c3ea3ab96b4f36debbe1d0f722fc10764b4cbae564"].unchecked_into(),
+		// 5H4NcpqS7LAAfKt8D77WgNL3ddUTFxT1axbpmnXD5JEDcfdH
+		hex!["4a027258265d673e28b080980ad5793832b4d87a7b2f346ba04debd33dab9d6d"].unchecked_into(),
+	)];
 
-	// generated with secret: subkey inspect "$secret"/fir
-//	let root_key: AccountId = hex![
-//		// 5Ff3iXP75ruzroPWRP2FYBHWnmGGBSb63857BgnzCoXNxfPo
-//		"d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
-//	].into();
+	// 用hex就可以解决(这个要用自定义的)
+	let root_key: AccountId = hex!["8e87d1c0b7588c8038d83317ef95c2be5449f500af057a174f14b43010a61e69"].into();
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
@@ -170,19 +106,25 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 
 /// Staging testnet config.
 pub fn staging_testnet_config() -> ChainSpec {
-	let boot_nodes = vec![];
+
+	let boot_nodes = vec![
+		// 自己的阿里云服务器
+		String::from("/ip4/47.106.196.14/tcp/30333/p2p/12D3KooWMutoAuM5TrpcsiVUSfnCEcKsbAPZr9PmZSqwiFsmD6MX").try_into().unwrap(),
+
+	];
+
 	let mut properties = Map::new();
 	properties.insert("tokenSymbol".into(),"DCAP".into());
 	properties.insert("tokenDecimals".into(),14.into());
 	ChainSpec::from_genesis(
-		"Staging Testnet",
-		"staging_testnet",
+		"Transx Testnet",
+		"Transx_testnet",
 		ChainType::Live,
 		staging_testnet_config_genesis,
 		boot_nodes,
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
-		None,
+		Some("transx"),
 		Some(properties),
 		Default::default(),
 	)
@@ -292,6 +234,8 @@ pub fn testnet_genesis(
 			.. Default::default()
 		}),
 		pallet_democracy: Some(DemocracyConfig::default()),
+
+		// todo 在这里初始化议会成员
 		pallet_elections_phragmen: Some(ElectionsConfig {
 			members: endowed_accounts.iter()
 						.take((num_endowed_accounts + 1) / 2)
@@ -299,8 +243,10 @@ pub fn testnet_genesis(
 						.map(|member| (member, STASH))
 						.collect(),
 		}),
+		// 最开始议会成员是没有的
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
 		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
+			// todo 这里给初始化验证节点
 			members: endowed_accounts.iter()
 						.take((num_endowed_accounts + 1) / 2)
 						.cloned()
@@ -308,7 +254,7 @@ pub fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 
-		// trans基金会
+		// todo trans基金会(这里要用自定义的 最开始可以用root)
 		pallet_collective_Instance3: Some(TransxCommiteeConfig {
 			members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -338,6 +284,7 @@ pub fn testnet_genesis(
 		pallet_sudo: Some(SudoConfig {
 			key: root_key,
 		}),
+
 		pallet_babe: Some(BabeConfig {
 			authorities: vec![],
 		}),
@@ -361,8 +308,9 @@ pub fn testnet_genesis(
 			max_members: 999,
 		}),
 
+
 		mine: Some(MineConfig{
-			founders: vec![hex!["8e87d1c0b7588c8038d83317ef95c2be5449f500af057a174f14b43010a61e69"].into(),] // 这个参数只是为了顺利跑代码
+			founders: vec![hex!["8e87d1c0b7588c8038d83317ef95c2be5449f500af057a174f14b43010a61e69"].into(),]
 		}),
 
 
