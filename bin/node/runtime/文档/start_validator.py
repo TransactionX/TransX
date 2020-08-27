@@ -4,3 +4,4 @@ cmd = r"./substrate --chain customspec.json --name WJA_ALIYUN --validator --ws-e
 result = os.popen(cmd).readlines()
 for i in result:
 	print(i)
+--node-key-file

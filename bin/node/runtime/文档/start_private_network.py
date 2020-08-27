@@ -17,25 +17,25 @@ def node2():
 def node3():
 	os.system(
 		r"./substrate --base-path ./db/node2 --chain customspec.json  --port 30335 --ws-port 9911 --rpc-port 30338 "
-		r" --validator  --eve --execution=NativeElseWasm -lruntime=debug  > substrate_9911.log 2>&1 &")
+		r" --validator  --eve --execution-offchain-worker=Wasm -lruntime=debug  > substrate_9911.log 2>&1 &")
 
 # 不向外透露的端口
 def node4():
 	os.system(
 		r"./substrate --base-path ./db/node3 --chain customspec.json  --port 30336 --ws-port 9922 --rpc-port 30337 "
-		r" --validator  --dave --execution=NativeElseWasm -lruntime=debug > substrate_9922.log 2>&1 &")
+		r" --validator  --dave --execution-offchain-worker=Wasm -lruntime=debug > substrate_9922.log 2>&1 &")
 
 # 不向外透露的端口
 def node5():
 	os.system(
 		r"./substrate --base-path ./db/node5 --chain customspec.json  --port 9953 --ws-port 9946 --rpc-port 9954 "
-		r" --validator  --ferdie --execution=NativeElseWasm -lruntime=debug   > substrate_9946.log 2>&1 &")
+		r" --validator  --ferdie --execution-offchain-worker=Wasm -lruntime=debug   > substrate_9946.log 2>&1 &")
 
 # 不向外透露的端口
 def node6():
 	os.system(
 		r"./substrate --base-path ./db/node6 --chain customspec.json --port 9955 --ws-port 9957 --rpc-port 9956 "
-		r" --validator  --charlie --execution=NativeElseWasm   > substrate_9955.log 2>&1 &")
+		r" --validator  --charlie --execution-offchain-worker=Wasm   > substrate_9955.log 2>&1 &")
 if __name__ == "__main__":
 
 	queue = []

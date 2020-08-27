@@ -582,7 +582,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
                 }
 
                 Ok(ValidTransaction {
-                    priority: 0,
+                    priority: 1000,
                     requires: vec![],
                     provides: vec![(block_num,account_id,tx,status).encode()],
                     longevity: TransactionLongevity::max_value(),

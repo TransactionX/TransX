@@ -117,13 +117,13 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + authority_
                 (*i).clone().into()
             }
         ).collect::<Vec<sr25519::Public>>();
-        debug::info!("tx valid,本地key: {:?}",authorities);
-        for i in Self::AuthorityId::all().iter(){
+        debug::info!("当前的所有验证节点,authorities keys: {:?}",authorities);
+        for i in Self::AuthorityId::all().iter(){   // 本地的账号
             let authority: Self::AuthorityId = (*i).clone();
             let  authority_sr25519: sr25519::Public = authority.clone().into();
             if authorities.contains(&authority_sr25519) {
                 let s: Self::AccountId= authority.clone().into_account32();
-                debug::info!("找到了账号: {:?}",s);
+                debug::info!("找到了本地账号: {:?}",s);
                 return (Some(authority),Some(s));
             }
         }

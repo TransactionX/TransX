@@ -130,7 +130,7 @@ OPTIONS:
 
         --bootnodes <ADDR>...                                    
             Specify a list of bootnodes
-
+--execution-offchain-worker
         --chain <CHAIN_SPEC>
             Specify the chain specification (one of dev, local, or staging)
 
