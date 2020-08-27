@@ -14,14 +14,14 @@ def kill(rpc_port):
 				return os.system("kill -9 " + j)
 
 # 生成raw文件
-file = r"./transx build-spec --chain=staging > localspec.json"
-raw = r"./transx build-spec --chain localspec.json --raw > customspec.json"
-all1 =[file, raw]
-for i in all1:
-	a = os.system(i)
-	time.sleep(10)
-	if a != 0:
-		exec("编译二进制文件没有成功!")
+# file = r"./transx build-spec --chain=staging > localspec.json"
+# raw = r"./transx build-spec --chain localspec.json --raw > customspec.json"
+# all1 =[file, raw]
+# for i in all1:
+# 	a = os.system(i)
+# 	time.sleep(10)
+# 	if a != 0:
+# 		exec("编译二进制文件没有成功!")
 
 opts, args = getopt.getopt(sys.argv[1:], "", ["babe-key=", "gran-key=", "rpc-port=", "log-file=", "port=", "ws-port=", "node-key-file=", "name=", "base-path=", ])
 print(opts)
@@ -61,7 +61,7 @@ print(babe_key)
 
 # 启动节点
 # 注意 如果需要node-key-file一定要与--rpc-port对得上
-cmd = r"./transx --chain customspec.json --validator --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all --execution=NativeElseWasm" + " " + append_string + " > %s"%log_file + ".log 2>&1 &"
+cmd = r"./transx --chain sword.json --validator --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all --execution=NativeElseWasm" + " " + append_string + " > %s"%log_file + ".log 2>&1 &"
 print(cmd)
 
 result = os.system(cmd)
