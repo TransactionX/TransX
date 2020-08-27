@@ -25,9 +25,9 @@
     ```
 * Clone
     `git clone https://github.com/TransactionX/TransX.git`
+    >>> Ensure your node run stably, skip to [releases](https://github.com/TransactionX/TransX/releases) and download `Source code` in the lastest release.
 * Compile the project
     `cargo build --release`
-
 ## NetWork
 * Connect to sword(test network).
 

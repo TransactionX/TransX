@@ -56,6 +56,7 @@
  `ufw allow 30333`
 ***
 ## 2. 选择节点类型并启动（目前连接的是transx的测试网)
+>>> 如果你是在本机部署多个节点， 那么你就应该注意： ws-port、rpc-port、port、base-path， 这些参数的值在不同节点间不应该相同， 以免冲突
 ### 作为数据同步节点
 >>> 说明：数据同步节点仅仅用于与链上进行数据交互，并不参与数据验证，可以向外提供wss连接
 * 用到的参数： --ws-port、--rpc-port、--port、--name(节点名字，节点启动后，在[监控服务]([https://telemetry.polkadot.io/#/Polkadot%20CC1](https://links.jianshu.com/go?to=https%3A%2F%2Ftelemetry.polkadot.io%2F%23%2FPolkadot%2520CC1)
