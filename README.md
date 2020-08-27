@@ -23,6 +23,10 @@
     rustup default nightly-2020-03-09-x86_64-unknown-linux-gnu
     rustup target add wasm32-unknown-unknown --toolchain nightly-2020-03-09-x86_64-unknown-linux-gnu
     ```
+* Clone
+    `git clone https://github.com/TransactionX/TransX.git`
+* Compile the project
+    `cargo build --release`
 
 ## NetWork
 * Connect to sword(test network).
@@ -60,6 +64,7 @@
     ```
 
     Additional CLI usage options are available and may be shown by running cargo run -- --help.
+>>> If you want to be a validation node， there is [specific documentation](https://github.com/TransactionX/TransX/blob/master/bin/node/runtime/%E6%96%87%E6%A1%A3/Transx%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2.md) about it.
 ## Contributions & Code of Conduct
 
 Please follow the contributions guidelines as outlined in [`docs/CONTRIBUTING.adoc`](docs/CONTRIBUTING.adoc). In all communications and contributions, this project follows the [Contributor Covenant Code of Conduct](docs/CODE_OF_CONDUCT.adoc).

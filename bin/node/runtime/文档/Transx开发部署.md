@@ -13,8 +13,8 @@
 
 * 安装wasm
   `rustup install nightly-2020-03-09`
-  `default nightly-2020-03-09-x86_64-unknown-linux-gnu`
-   `rustup target add wasm32-unknown-unknown --toolchain nightly-2020-03-09-x86_64-unknown-linux-gnu`
+  `rustup default nightly-2020-03-09-x86_64-unknown-linux-gnu`
+  `rustup target add wasm32-unknown-unknown --toolchain nightly-2020-03-09-x86_64-unknown-linux-gnu`
 ***
 ## 2.编译Transx
 * 克隆[Transx官方代码库](https://github.com/TransactionX/TransX.git)
