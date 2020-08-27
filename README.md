@@ -25,14 +25,14 @@
     ```
 * Clone
     `git clone https://github.com/TransactionX/TransX.git`
-    >>> Ensure your node run stably, skip to [releases](https://github.com/TransactionX/TransX/releases) and download `Source code` in the lastest release.
+    > Ensure your node run stably, skip to [releases](https://github.com/TransactionX/TransX/releases) and download `Source code` in the lastest release.
 * Compile the project
     `cargo build --release`
 ## NetWork
 * Connect to sword(test network).
 
     `./target/release/transx --chain=sword.json`
-    >>> Up to now, we only start the testnet.
+    > Up to now, we only start the testnet.
 
 * Run as dev.
     Remove the db
@@ -64,7 +64,7 @@
     ```
 
     Additional CLI usage options are available and may be shown by running cargo run -- --help.
->>> If you want to be a validation node， there is [specific documentation](https://github.com/TransactionX/TransX/blob/master/bin/node/runtime/%E6%96%87%E6%A1%A3/Transx%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2.md) about it.
+> If you want to be a validation node， there is [specific documentation](https://github.com/TransactionX/TransX/blob/master/bin/node/runtime/%E6%96%87%E6%A1%A3/Transx%E5%BC%80%E5%8F%91%E9%83%A8%E7%BD%B2.md) about it.
 ## Contributions & Code of Conduct
 
 Please follow the contributions guidelines as outlined in [`docs/CONTRIBUTING.adoc`](docs/CONTRIBUTING.adoc). In all communications and contributions, this project follows the [Contributor Covenant Code of Conduct](docs/CODE_OF_CONDUCT.adoc).
