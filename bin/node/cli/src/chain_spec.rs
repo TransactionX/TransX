@@ -224,7 +224,7 @@ pub fn testnet_genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: initial_authorities.len() as u32 * 2,
+			validator_count: 32u32, // 这里是验证节点个数的上限
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
@@ -235,7 +235,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_democracy: Some(DemocracyConfig::default()),
 
-		// todo 在这里初始化议会成员
+		// 在这里初始化议会成员
 		pallet_elections_phragmen: Some(ElectionsConfig {
 			members: endowed_accounts.iter()
 						.take((num_endowed_accounts + 1) / 2)

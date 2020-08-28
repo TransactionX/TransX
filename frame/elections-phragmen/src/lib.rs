@@ -244,6 +244,8 @@ decl_storage! {
 		build(|config: &GenesisConfig<T>| {
 			let members = config.members.iter().map(|(ref member, ref stake)| {
 				// make sure they have enough stake
+
+				// 这一步有什么意义呢？？？？？？？？？？？
 				assert!(
 					T::Currency::free_balance(member) >= *stake,
 					"Genesis member does not have enough stake",

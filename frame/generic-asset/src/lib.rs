@@ -445,8 +445,10 @@ decl_error! {
 		VoteError,
 		/// 没有设置销毁币抵押金额
 		BurnPledgeNone,
-		/// 金额太少
+		/// 抵押不够
 		BondTooLow,
+		/// 铸币金额太小
+		AmountTooLow,
 		/// 队列过长
 		QueueTooLong,
 		/// 已经存在的议案
@@ -513,7 +515,7 @@ decl_module! {
 
 			// 铸币金额太小 不给铸币
 			let amount_1 = Self::balance_change_into_balanceof(amount)?;
-			ensure!(<MintMinAmount<T>>::get() <= amount_1, Error::<T>::BondTooLow);
+			ensure!(<MintMinAmount<T>>::get() <= amount_1, Error::<T>::AmountTooLow);
 
 			// 如果正在等待的铸币队列大于100， 则不给申请铸币
 			let tempt_queue = Self::vote_queue();
@@ -652,7 +654,7 @@ decl_module! {
 
 			// 销毁币金额太小 不给销毁币
 			let amount_1 = Self::balance_change_into_balanceof(amount)?;
-			ensure!(<BurnMinAmount<T>>::get() <= amount_1, Error::<T>::BondTooLow);
+			ensure!(<BurnMinAmount<T>>::get() <= amount_1, Error::<T>::AmountTooLow);
 
 			// 抵押金额不够不给操作
 			T::Currency::reserve(&to, <BurnPledge<T>>::get())
