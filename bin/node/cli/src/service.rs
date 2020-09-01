@@ -208,23 +208,23 @@ pub fn new_full_base(
 
 	(with_startup_data)(&block_import, &babe_link);
 
-	if let Some(seed) = dev_seed.clone() {
-			keystore
-			.write()
-			.insert_ephemeral_from_seed_by_type::<tx_valid::tx_crypto::AuthorityPair>(
-				&seed,
-				tx_valid::TX_KEY_TYPE,
-			)
-			.expect("Dev Seed should always succeed.");
-
-		keystore
-			.write()
-			.insert_ephemeral_from_seed_by_type::<address_valid::address_crypto::AuthorityPair>(
-				&seed,
-				address_valid::ADDRESS_KEY_TYPE,
-			)
-			.expect("Dev Seed should always succeed.");
-	}
+	// if let Some(seed) = dev_seed.clone() {
+	// 		keystore
+	// 		.write()
+	// 		.insert_ephemeral_from_seed_by_type::<tx_valid::tx_crypto::AuthorityPair>(
+	// 			&seed,
+	// 			tx_valid::TX_KEY_TYPE,
+	// 		)
+	// 		.expect("Dev Seed should always succeed.");
+	//
+	// 	keystore
+	// 		.write()
+	// 		.insert_ephemeral_from_seed_by_type::<address_valid::address_crypto::AuthorityPair>(
+	// 			&seed,
+	// 			address_valid::ADDRESS_KEY_TYPE,
+	// 		)
+	// 		.expect("Dev Seed should always succeed.");
+	// }
 
 
 

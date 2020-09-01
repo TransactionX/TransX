@@ -86,7 +86,7 @@
 ***
 * `质押  -> 账户操作 -> 存储账户`, 对controller与stash进行绑定操作
 ***
-* `质押  -> 账户操作 ->验证人`, controller账号声明自己作为验证节点(如果这一步失败：选择 交易 -> staking -> validator)c
+* `质押  -> 账户操作 ->验证人`, controller账号声明自己作为验证节点(如果这一步失败：选择 交易 -> staking -> validator)
 ***
 * `rpccalls  -> author -> rotatekeys`, 生成session_keys, 复制
 ***

@@ -121,6 +121,7 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + authority_
         for i in Self::AuthorityId::all().iter(){   // 本地的账号
             let authority: Self::AuthorityId = (*i).clone();
             let  authority_sr25519: sr25519::Public = authority.clone().into();
+            debug::info!("本地账号信息:{:?}",authority_sr25519);
             if authorities.contains(&authority_sr25519) {
                 let s: Self::AccountId= authority.clone().into_account32();
                 debug::info!("找到了本地账号: {:?}",s);
