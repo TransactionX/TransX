@@ -57,14 +57,15 @@ fi
 if ! which rustup >/dev/null 2>&1; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
 	source ~/.cargo/env
-	rustup default stable
+	rustup update stable
 else
 	rustup update
-	rustup default stable
+	rustup update stable
 fi
 
-rustup update nightly
-rustup target add wasm32-unknown-unknown --toolchain nightly
+rustup install nightly-2020-07-27
+rustup default nightly-2020-07-27-x86_64-unknown-linux-gnu
+rustup target add wasm32-unknown-unknown --toolchain nightly-2020-07-27-x86_64-unknown-linux-gnu
 
 
 if [[ "$1" == "--cn" ]]; then
