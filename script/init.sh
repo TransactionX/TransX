@@ -28,7 +28,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected.(Arch,Ubuntu/Debian, MacOS Support)"
 		$MAKE_ME_ROOT apt update
-		$MAKE_ME_ROOT apt install -y cmake pkg-config libssl-dev git gcc build-essential git clang libclang-dev
+		$MAKE_ME_ROOT apt install -y cmake pkg-config libssl-dev git gcc build-essential git clang libclang-dev protobuf-compiler
 	else
 		echo "Unknown Linux distribution.(Arch,Ubuntu/Debian, MacOS Support)"
 		echo "This OS is not supported with this script at present. Sorry."
@@ -57,27 +57,27 @@ fi
 if ! which rustup >/dev/null 2>&1; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
 	source ~/.cargo/env
-  rustup install nightly-2020-03-09
-  rustup default nightly-2020-03-09-x86_64-unknown-linux-gnu
-  rustup target add wasm32-unknown-unknown --toolchain nightly-2020-03-09-x86_64-unknown-linux-gnu
+	rustup default stable
 else
 	rustup update
-	rustup default nightly-2020-03-09-x86_64-unknown-linux-gnu
-	rustup target add wasm32-unknown-unknown --toolchain nightly-2020-03-09-x86_64-unknown-linux-gnu
+	rustup default stable
 fi
+
+rustup update nightly
+rustup target add wasm32-unknown-unknown --toolchain nightly
 
 
 if [[ "$1" == "--cn" ]]; then
 	g=$(mktemp -d)
 	git clone https://github.com.cnpmjs.org/TransactionX/TransX.git "$g"
 	pushd "$g"
-	cargo install --force --path ./bin/node/cli #substrate
+	cargo install --force --path ./bin/node/cli
 	popd
 else
 	g=$(mktemp -d)
 	git clone https://github.com/TransactionX/TransX.git "$g"
 	pushd "$g"
-	cargo install --force --path ./bin/node/cli #substrate
+	cargo install --force --path ./bin/node/cli
 	popd
 fi
 
