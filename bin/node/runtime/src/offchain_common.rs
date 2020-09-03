@@ -6,12 +6,12 @@ use sp_runtime::RuntimeAppPublic;
 use frame_support::{Parameter,debug};
 use app_crypto::{sr25519};
 use frame_system::{self as system};
-use sp_core::{offchain::Timestamp};
+use sp_core::{crypto::KeyTypeId,offchain::Timestamp};
 use pallet_authority_discovery as authority_discovery;
 use sp_runtime::{offchain::http};
 use alt_serde::{Deserialize, Deserializer};
 
-
+pub const TX_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ofty");
 pub const VERIFY_STATUS: &[u8] = b"verify_status";  // 验证的返回状态
 
 #[serde(crate = "alt_serde")]
@@ -109,7 +109,7 @@ pub trait AccountIdPublicConver{
 
 pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + authority_discovery::Trait{
     type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
-    fn authority_id() ->(Option<Self::AuthorityId>,Option<Self::AccountId>){
+    fn authority_id() -> (Option<Self::AuthorityId>,Option<Self::AccountId>){
         //通过本地化的密钥类型查找此应用程序可访问的所有本地密钥。
         // 然后遍历当前存储在chain上的所有ValidatorList，并根据本地键列表检查它们，直到找到一个匹配，否则返回None。
         let authorities = <authority_discovery::Module<Self>>::authorities().iter().map(
@@ -117,7 +117,10 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + authority_
                 (*i).clone().into()
             }
         ).collect::<Vec<sr25519::Public>>();
+        let key_id = core::str::from_utf8(&Self::AuthorityId::ID.0).unwrap();
+
         debug::info!("当前的所有验证节点,authorities keys: {:?}",authorities);
+        debug::info!("当前的节点 keytypeId: {:?}",key_id);
         for i in Self::AuthorityId::all().iter(){   // 本地的账号
             let authority: Self::AuthorityId = (*i).clone();
             let  authority_sr25519: sr25519::Public = authority.clone().into();
@@ -198,13 +201,13 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + authority_
     }
 }
 
-pub trait AdddressValidLocalAuthorityTrait: BaseLocalAuthorityTrait{
-    type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
-}
-
-pub trait TxValidLocalAuthorityTrait: BaseLocalAuthorityTrait{
-    type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
-}
+// pub trait AdddressValidLocalAuthorityTrait: BaseLocalAuthorityTrait{
+//     type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
+// }
+//
+// pub trait TxValidLocalAuthorityTrait: BaseLocalAuthorityTrait{
+//     type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
+// }
 
 
 

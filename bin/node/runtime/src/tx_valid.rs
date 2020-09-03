@@ -50,7 +50,7 @@ pub type StrDispatchResult = core::result::Result<(), &'static str>;
 ///
 /// For security reasons the offchain worker doesn't have direct access to the keys
 /// but only to app-specific subkeys, which are defined and grouped by their `KeyTypeId`.
-pub const TX_KEY_TYPE: KeyTypeId = KeyTypeId(*b"oftx");
+
 pub const VERIFY_MSG: &[u8] = b"verify_msg";        // 验证的失败消息
 
 #[cfg_attr(feature = "std", derive(Debug, PartialEq, Eq))]
@@ -94,9 +94,14 @@ pub mod tx_crypto {
         }
     }
 
+    app_crypto::with_pair! {
+		/// An bridge-eos keypair using sr25519 as its crypto.
+		pub type AuthorityPair = app_sr25519::Pair;
+	}
+
+    pub type AuthoritySignature = app_sr25519::Signature;
+
     pub type AuthorityId = app_sr25519::Public;
-    #[cfg(feature = "std")]
-    pub type AuthorityPair = app_sr25519::Pair;
 }
 
 
@@ -112,7 +117,7 @@ enum ReportStatus {
 }
 
 /// The module's configuration trait.
-pub trait Trait: TxValidLocalAuthorityTrait + SendTransactionTypes<Call<Self>> + MineTrait + ReportTrait{
+pub trait Trait: BaseLocalAuthorityTrait + SendTransactionTypes<Call<Self>> + MineTrait + ReportTrait{
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 //    type Call: From<Call<Self>>;

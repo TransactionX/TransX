@@ -228,13 +228,13 @@ impl offchain_common::BaseLocalAuthorityTrait for Runtime {
 	type AuthorityId = address_valid::address_crypto::AuthorityId;
 }
 
-impl offchain_common::AdddressValidLocalAuthorityTrait for Runtime {
-	type AuthorityId = address_valid::address_crypto::AuthorityId;
-}
-
-impl offchain_common::TxValidLocalAuthorityTrait for Runtime {
-	type AuthorityId = tx_valid::tx_crypto::AuthorityId;
-}
+// impl offchain_common::AdddressValidLocalAuthorityTrait for Runtime {
+// 	type AuthorityId = address_valid::address_crypto::AuthorityId;
+// }
+//
+// impl offchain_common::TxValidLocalAuthorityTrait for Runtime {
+// 	type AuthorityId = tx_valid::tx_crypto::AuthorityId;
+// }
 
 parameter_types! {
 	pub const TxFetchNumber:BlockNumber = 10; // todo:线上改为1小时清1次

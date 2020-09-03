@@ -45,18 +45,17 @@ use crate::offchain_common::*;
 ///
 /// For security reasons the offchain worker doesn't have direct access to the keys
 /// but only to app-specific subkeys, which are defined and grouped by their `KeyTypeId`.
-pub const ADDRESS_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ofad");
 
 
 type Signature = AnySignature;
 pub mod address_crypto {
-    use super::{ADDRESS_KEY_TYPE as KEY_TYPE,AccountIdPublicConver,Signature};
+    use super::{TX_KEY_TYPE as KEY_TYPE,AccountIdPublicConver,Signature};
     pub mod app_sr25519 {
         use super::{KEY_TYPE,AccountIdPublicConver};
         use sp_runtime::{MultiSignature,MultiSigner};
         use sp_runtime::traits::{IdentifyAccount};  // AccountIdConversion,
-    use sp_core::{crypto::AccountId32 as AccountId};
-        use sp_runtime::app_crypto::{app_crypto, sr25519};
+        use sp_core::{crypto::AccountId32 as AccountId};
+        use sp_runtime::app_crypto::{app_crypto,sr25519};
         app_crypto!(sr25519, KEY_TYPE);
 
         impl From<Signature> for super::Signature {
@@ -74,9 +73,14 @@ pub mod address_crypto {
         }
     }
 
+    app_crypto::with_pair! {
+		/// An bridge-eos keypair using sr25519 as its crypto.
+		pub type AuthorityPair = app_sr25519::Pair;
+	}
+
+    pub type AuthoritySignature = app_sr25519::Signature;
+
     pub type AuthorityId = app_sr25519::Public;
-    #[cfg(feature = "std")]
-    pub type AuthorityPair = app_sr25519::Pair;
 }
 
 
@@ -92,7 +96,7 @@ enum VerifyStatus {
 }
 
 /// The module's configuration trait.
-pub trait Trait: AdddressValidLocalAuthorityTrait + SendTransactionTypes<Call<Self>> + RegisterTrait{
+pub trait Trait: BaseLocalAuthorityTrait + SendTransactionTypes<Call<Self>> + RegisterTrait{
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
