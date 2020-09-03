@@ -64,11 +64,18 @@ else
 fi
 
 rustup install nightly-2020-07-27
-rustup default nightly-2020-07-27-x86_64-unknown-linux-gnu
-rustup target add wasm32-unknown-unknown --toolchain nightly-2020-07-27-x86_64-unknown-linux-gnu
+rustup default nightly-2020-07-27
+rustup target add wasm32-unknown-unknown --toolchain nightly-2020-07-27
 
 
 if [[ "$1" == "--cn" ]]; then
+
+  echo "[source.crates-io]
+registry = \"https://github.com/rust-lang/crates.io-index\"
+replace-with = 'ustc'
+[source.ustc]
+registry = \"https://mirrors.ustc.edu.cn/crates.io-index\"" > ~/.cargo/config
+
 	g=$(mktemp -d)
 	git clone https://github.com.cnpmjs.org/TransactionX/TransX.git "$g"
 	pushd "$g"
