@@ -229,7 +229,8 @@ pub fn testnet_genesis(
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
-			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
+// 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
+			invulnerables: vec![],
 			slash_reward_fraction: Perbill::from_percent(10),
 			.. Default::default()
 		}),
