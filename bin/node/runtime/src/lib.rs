@@ -331,7 +331,7 @@ impl pallet_proxy::Trait for Runtime {
 }
 
 parameter_types!{
-	pub const ReservationFee: Balance = 10*DOLLARS;
+	pub const ReservationFee: Balance = 2*DOLLARS;
 	pub const MinLength: usize = 3;
 	pub const MaxLength: usize = 20;
 
@@ -720,7 +720,7 @@ impl pallet_membership::Trait<pallet_membership::Instance1> for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 20 * DOLLARS;
+	pub const ProposalBondMinimum: Balance = 5 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(0);  // 不销毁
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
@@ -988,7 +988,7 @@ impl pallet_finality_tracker::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const BasicDeposit: Balance = 10 * DOLLARS;       // 258 bytes on-chain
+	pub const BasicDeposit: Balance = 2 * DOLLARS;       // 258 bytes on-chain
 	pub const FieldDeposit: Balance = 250 * CENTS;        // 66 bytes on-chain
 	pub const SubAccountDeposit: Balance = 2 * DOLLARS;   // 53 bytes on-chain
 	pub const MaxSubAccounts: u32 = 100;

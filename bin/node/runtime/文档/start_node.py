@@ -5,7 +5,7 @@ import time
 from subprocess import run
 
 def kill(rpc_port):
-	info = os.popen("ps -ef | grep transx").readlines()
+	info = os.popen("ps -ef | grep TransX").readlines()
 	if info:
 		for i in info:
 			if rpc_port in i:
@@ -14,8 +14,8 @@ def kill(rpc_port):
 				return os.system("kill -9 " + j)
 
 # 生成raw文件
-# file = r"./transx build-spec --chain=staging > localspec.json"
-# raw = r"./transx build-spec --chain localspec.json --raw > customspec.json"
+# file = r"./TransX build-spec --chain=staging > localspec.json"
+# raw = r"./TransX build-spec --chain localspec.json --raw > customspec.json"
 # all1 =[file, raw]
 # for i in all1:
 # 	a = os.system(i)
@@ -61,7 +61,7 @@ print(babe_key)
 
 # 启动节点
 # 注意 如果需要node-key-file一定要与--rpc-port对得上
-cmd = r"./transx --chain sword.json --validator --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all --execution=NativeElseWasm" + " " + append_string + " > %s"%log_file + ".log 2>&1 &"
+cmd = r"./TransX --chain sword.json --validator --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all --execution=NativeElseWasm" + " " + append_string + " > %s"%log_file + ".log 2>&1 &"
 print(cmd)
 
 result = os.system(cmd)
