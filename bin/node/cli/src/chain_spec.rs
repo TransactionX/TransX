@@ -258,21 +258,26 @@ pub fn testnet_genesis(
 		// todo trans基金会(这里要用自定义的 最开始可以用root)
 		pallet_collective_Instance3: Some(TransxCommiteeConfig {
 			members: vec![
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_account_id_from_seed::<sr25519::Public>("Charlie"),
-				get_account_id_from_seed::<sr25519::Public>("Dave"),
+				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
+				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
 			],
 			phantom: Default::default(),
 		}),
 
 		generic_asset: Some(GenericAssetConfig{
-			next_asset_id: 0u32,
+			next_asset_id: 3u32,  // 下一次创建的资产的id
 			staking_asset_id:0u32,
 			spending_asset_id:0u32,
-			assets:vec![0,1,2],
-			initial_balance: GenericAssetBalance,
-			endowed_accounts: vec![],
+			assets:vec![0,1,2],  // 初始化资产
+			initial_balance: GenericAssetBalance,  // 每种资产每个人初始化金额
+
+			endowed_accounts: vec![
+				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
+				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
+			],  // 每种资产里面初始配置人员
+
 		}
 		),
 
