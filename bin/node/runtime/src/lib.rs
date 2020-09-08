@@ -226,6 +226,7 @@ parameter_types! {
 
 impl offchain_common::BaseLocalAuthorityTrait for Runtime {
 	type AuthorityId = address_valid::address_crypto::AuthorityId;
+	type FindAllAuthor = pallet_session::FindAllAccountFromAuthor<Self>;
 }
 
 // impl offchain_common::AdddressValidLocalAuthorityTrait for Runtime {

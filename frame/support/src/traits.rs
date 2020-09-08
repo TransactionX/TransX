@@ -564,6 +564,14 @@ impl<A> FindAuthor<A> for () {
 	}
 }
 
+/// 寻找所有的validtors
+pub trait FindAllAuthor<Author> {
+	/// Find the author of a block based on the pre-runtime digests.
+	fn find_all_author() -> Vec<Author>;
+}
+
+
+
 /// A trait for verifying the seal of a header and returning the author.
 pub trait VerifySeal<Header, Author> {
 	/// Verify a header and return the author, if any.

@@ -108,7 +108,7 @@ use sp_staking::SessionIndex;
 use frame_support::{
 	ensure, decl_module, decl_event, decl_storage, decl_error, ConsensusEngineId, Parameter,
 	traits::{
-		Get, FindAuthor, ValidatorRegistration, EstimateNextSessionRotation, EstimateNextNewSession,
+		Get, FindAuthor,FindAllAuthor, ValidatorRegistration, EstimateNextSessionRotation, EstimateNextNewSession,
 	},
 	dispatch::{self, DispatchResult, DispatchError},
 	weights::Weight,
@@ -810,5 +810,17 @@ impl<T: Trait> EstimateNextNewSession<T::BlockNumber> for Module<T> {
 
 	fn weight(now: T::BlockNumber) -> Weight {
 		T::NextSessionRotation::weight(now)
+	}
+}
+
+
+
+pub struct FindAllAccountFromAuthor<T>(sp_std::marker::PhantomData<(T)>);
+impl<T: Trait> FindAllAuthor<T::ValidatorId>
+	for FindAllAccountFromAuthor<T>
+{
+	fn find_all_author() -> Vec<T::ValidatorId>
+	{
+		<Module<T>>::validators()
 	}
 }
