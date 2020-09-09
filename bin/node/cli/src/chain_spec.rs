@@ -61,7 +61,7 @@ fn session_keys(
 }
 
 fn staging_testnet_config_genesis() -> GenesisConfig {
-	// todo 初始化验证人是否给两个就行
+	//  初始化验证人是否给两个就行
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![
 
 		( //5H13XJ1vYup8MJj2KpiEUjrdvUT1X9Pkp2oLUwopK7Djttt3
@@ -177,26 +177,11 @@ pub fn testnet_genesis(
 	endowed_accounts: Option<Vec<AccountId>>,
 	enable_println: bool,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
-		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-		]
-	});
+	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap();
 	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: Balance = 10_0000 * DOLLARS;
-	const STASH: Balance = 10000 * DOLLARS;
+	const STASH: Balance = 100 * DOLLARS;
 	const GenericAssetBalance: Balance = 10000 * DOLLARS;
 
 	GenesisConfig {
@@ -205,14 +190,26 @@ pub fn testnet_genesis(
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
-			balances: endowed_accounts.iter().cloned()
+
+		balances: endowed_accounts.iter().cloned()
 				.map(|k| (k, ENDOWMENT))
-				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
+				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH))).chain(
+			vec![
+				(hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(), STASH),
+				(hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(), STASH),
+				(hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(), STASH),
+				(hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(), STASH),
+				(hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(), STASH),
+			]
+
+		)
 				.collect(),
 		}),
+
 		pallet_indices: Some(IndicesConfig {
 			indices: vec![],
 		}),
+
 		pallet_session: Some(SessionConfig {
 			keys: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.0.clone(), session_keys(
@@ -223,56 +220,72 @@ pub fn testnet_genesis(
 				))
 			}).collect::<Vec<_>>(),
 		}),
+
 		pallet_staking: Some(StakingConfig {
 			validator_count: 32u32, // 这里是验证节点个数的上限
 			minimum_validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
-// 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			invulnerables: vec![],
 			slash_reward_fraction: Perbill::from_percent(10),
 			.. Default::default()
 		}),
+
 		pallet_democracy: Some(DemocracyConfig::default()),
 
 		// 在这里初始化议会成员
 		pallet_elections_phragmen: Some(ElectionsConfig {
-			members: endowed_accounts.iter()
-						.take((num_endowed_accounts + 1) / 2)
-						.cloned()
-						.map(|member| (member, STASH))
-						.collect(),
+			members: vec![
+				(hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(), STASH),
+				(hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(), STASH),
+				(hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(), STASH),
+				(hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(), STASH),
+				(hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(), STASH),
+			],
 		}),
-		// 最开始议会成员是没有的
+
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
+
 		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
-			// todo 这里给初始化验证节点
-			members: endowed_accounts.iter()
-						.take((num_endowed_accounts + 1) / 2)
-						.cloned()
-						.collect(),
+			members: vec![
+				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
+				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
+				hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
+				hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
+			],
+
 			phantom: Default::default(),
 		}),
 
-		// todo trans基金会(这里要用自定义的 最开始可以用root)
+		// 金会(这里要用自定义的)
 		pallet_collective_Instance3: Some(TransxCommiteeConfig {
 			members: vec![
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_account_id_from_seed::<sr25519::Public>("Charlie"),
-				get_account_id_from_seed::<sr25519::Public>("Dave"),
+				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
+				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
+				hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
+				hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
 			],
 			phantom: Default::default(),
 		}),
 
 		generic_asset: Some(GenericAssetConfig{
-			next_asset_id: 0u32,
-			staking_asset_id:0u32,
-			spending_asset_id:0u32,
-			assets:vec![0,1,2],
-			initial_balance: GenericAssetBalance,
-			endowed_accounts: vec![],
+			next_asset_id: 3u32,  // 下一次创建的资产的id
+			staking_asset_id:0u32,  //
+			spending_asset_id:1u32, //
+			assets:vec![0,1,2],  // 初始化资产
+			initial_balance: GenericAssetBalance,  // 每种资产每个人初始化金额
+
+			endowed_accounts: vec![
+				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
+				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
+				hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
+				hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
+			],  // 每种资产里面初始配置人员
+
 		}
 		),
 
@@ -302,7 +315,7 @@ pub fn testnet_genesis(
 		pallet_treasury: Some(Default::default()),
 		pallet_society: Some(SocietyConfig {
 			members: endowed_accounts.iter()
-						.take((num_endowed_accounts + 1) / 2)
+						// .take((num_endowed_accounts + 1) / 2)
 						.cloned()
 						.collect(),
 			pot: 0,
@@ -314,146 +327,6 @@ pub fn testnet_genesis(
 			founders: vec![hex!["8e87d1c0b7588c8038d83317ef95c2be5449f500af057a174f14b43010a61e69"].into(),]
 		}),
 
-
 		pallet_vesting: Some(Default::default()),
-	}
-}
-
-fn development_config_genesis() -> GenesisConfig {
-
-	testnet_genesis(
-		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
-			authority_keys_from_seed("Charlie"),
-			authority_keys_from_seed("Dave"),
-			authority_keys_from_seed("Eve"),
-			authority_keys_from_seed("Ferdie"),
-		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-		true,
-	)
-}
-
-/// Development config (single validator Alice)
-pub fn development_config() -> ChainSpec {
-	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(),"DCAP".into());
-	properties.insert("tokenDecimals".into(),14.into());
-	ChainSpec::from_genesis(
-		"Development",
-		"dev",
-		ChainType::Development,
-		development_config_genesis,
-		vec![],
-		None,
-		None,
-		Some(properties),
-		Default::default(),
-	)
-}
-
-fn local_testnet_genesis() -> GenesisConfig {
-	testnet_genesis(
-		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
-		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-		false,
-	)
-}
-
-/// Local testnet config (multivalidator Alice + Bob)
-pub fn local_testnet_config() -> ChainSpec {
-	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(),"DCAP".into());
-	properties.insert("tokenDecimals".into(),14.into());
-	ChainSpec::from_genesis(
-		"Local Testnet",
-		"local_testnet",
-		ChainType::Local,
-		local_testnet_genesis,
-		vec![],
-		None,
-		None,
-		Some(properties),
-		Default::default(),
-	)
-}
-
-#[cfg(test)]
-pub(crate) mod tests {
-	use super::*;
-	use crate::service::{new_full, new_light};
-	use sc_service_test;
-	use sp_runtime::BuildStorage;
-
-	fn local_testnet_genesis_instant_single() -> GenesisConfig {
-		testnet_genesis(
-			vec![
-				authority_keys_from_seed("Alice"),
-			],
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			None,
-			false,
-		)
-	}
-
-	/// Local testnet config (single validator - Alice)
-	pub fn integration_test_config_with_single_authority() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis_instant_single,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	/// Local testnet config (multivalidator Alice + Bob)
-	pub fn integration_test_config_with_two_authorities() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	#[test]
-	#[ignore]
-	fn test_connectivity() {
-		sc_service_test::connectivity(
-			integration_test_config_with_two_authorities(),
-			|config| new_full(config),
-			|config| new_light(config),
-		);
-	}
-
-	#[test]
-	fn test_create_development_chain_spec() {
-		development_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_create_local_testnet_chain_spec() {
-		local_testnet_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_staging_test_net_chain_spec() {
-		staging_testnet_config().build_storage().unwrap();
 	}
 }
