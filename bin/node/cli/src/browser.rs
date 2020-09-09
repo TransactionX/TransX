@@ -39,7 +39,7 @@ async fn start_inner(chain_spec: Option<String>, log_level: String) -> Result<Cl
 	let chain_spec = match chain_spec {
 		Some(chain_spec) => ChainSpec::from_json_bytes(chain_spec.as_bytes().to_vec())
 			.map_err(|e| format!("{:?}", e))?,
-		None => crate::chain_spec::development_config(),
+		Non=> crate::chain_spec::staging_testnet_config(),
 	};
 
 	let config = browser_configuration(chain_spec).await?;
