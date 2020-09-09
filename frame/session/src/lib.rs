@@ -816,6 +816,7 @@ impl<T: Trait> EstimateNextNewSession<T::BlockNumber> for Module<T> {
 
 
 pub struct FindAllAccountFromAuthor<T>(sp_std::marker::PhantomData<(T)>);
+/// 查找到所有的 validtors
 impl<T: Trait> FindAllAuthor<T::ValidatorId>
 	for FindAllAccountFromAuthor<T>
 {

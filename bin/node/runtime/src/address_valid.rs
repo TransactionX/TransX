@@ -177,7 +177,6 @@ decl_module! {
        let (token_status,register_account,symbol) = <TokenStatus<T>>::get(tx.clone());
        debug::info!("token_status={:?},register_account={:?},symbol={:?}",token_status,register_account,symbol);
        ensure!(<TokenStatus<T>>::contains_key(tx.clone()), "不需要再操作,tx已经从TokenStatus移除");
-       // ensure!(<TokenStatus<T>>::get(tx.clone()).0 != 0, "不需要再操作,tx已经从TokenStatus移除");
        debug::info!("获取到了本地服务的返回信息,对状态位操作");
       if status== 0{   // 20000
         // 成功
