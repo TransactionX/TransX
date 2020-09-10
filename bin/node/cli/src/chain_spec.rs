@@ -96,11 +96,20 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
+	let technical: Vec<AccountId> = vec![
+		hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
+		hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
+		hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
+		hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
+		hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
+	];
+
 	testnet_genesis(
 		initial_authorities,
 		root_key,
 		Some(endowed_accounts),
 		false,
+		technical,
 	)
 }
 
@@ -176,8 +185,10 @@ pub fn testnet_genesis(
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 	enable_println: bool,
+	technical: Vec<AccountId>,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap();
+
 	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: Balance = 10_0000 * DOLLARS;
@@ -194,13 +205,7 @@ pub fn testnet_genesis(
 		balances: endowed_accounts.iter().cloned()
 				.map(|k| (k, ENDOWMENT))
 				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH))).chain(
-			vec![
-				(hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(), STASH),
-				(hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(), STASH),
-				(hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(), STASH),
-				(hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(), STASH),
-				(hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(), STASH),
-			]
+			technical.iter().cloned().map(|z| (z.clone(), STASH))
 
 		)
 				.collect(),
@@ -236,38 +241,20 @@ pub fn testnet_genesis(
 
 		// 在这里初始化议会成员
 		pallet_elections_phragmen: Some(ElectionsConfig {
-			members: vec![
-				(hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(), STASH),
-				(hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(), STASH),
-				(hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(), STASH),
-				(hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(), STASH),
-				(hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(), STASH),
-			],
+			members: technical.iter().cloned().map(|z| (z.clone(), STASH)).collect(),
 		}),
 
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
 
 		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
-			members: vec![
-				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
-				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
-				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
-				hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
-				hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
-			],
+			members: technical.clone(),
 
 			phantom: Default::default(),
 		}),
 
 		// 金会(这里要用自定义的)
 		pallet_collective_Instance3: Some(TransxCommiteeConfig {
-			members: vec![
-				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
-				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
-				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
-				hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
-				hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
-			],
+			members: technical.clone(),
 			phantom: Default::default(),
 		}),
 
@@ -278,13 +265,7 @@ pub fn testnet_genesis(
 			assets:vec![0,1,2],  // 初始化资产
 			initial_balance: GenericAssetBalance,  // 每种资产每个人初始化金额
 
-			endowed_accounts: vec![
-				hex!["5853712bf239d59accc1e9ce56f257736dde78192bb7ae1a616482445ea39e44"].into(),
-				hex!["9efd40ccf6d27dc17a68e13f89414fd6ce443b9d4df37db68c7cf5c561b74f55"].into(),
-				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
-				hex!["50902010325da517dde82f459f85080923a486ef911b74028889ca5465b1c25f"].into(),
-				hex!["a62e824a6d125a0d2c6657f48844a70911c7d5a24ea4e2db5a5582f06a67cb15"].into(),
-			],  // 每种资产里面初始配置人员
+			endowed_accounts: technical,  // 每种资产里面初始配置人员
 
 		}
 		),

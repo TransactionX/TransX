@@ -42,6 +42,8 @@ enum ChainSpecBuilder {
 		endowed_accounts: Vec<String>,
 		/// Sudo account address (SS58 format).
 		#[structopt(long, short)]
+		technical_accounts: Vec<String>,
+		#[structopt(long, short)]
 		sudo_account: String,
 		/// The path where the chain spec should be saved.
 		#[structopt(long, short, default_value = "./chain_spec.json")]
@@ -53,6 +55,8 @@ enum ChainSpecBuilder {
 		/// The number of authorities.
 		#[structopt(long, short)]
 		authorities: usize,
+		#[structopt(long, short)]
+		technical: usize,
 		/// The number of endowed accounts.
 		#[structopt(long, short, default_value = "0")]
 		endowed: usize,
@@ -83,6 +87,7 @@ impl ChainSpecBuilder {
 
 fn genesis_constructor(
 	authority_seeds: &[String],
+	technical_accounts: &[AccountId],
 	endowed_accounts: &[AccountId],
 	sudo_account: &AccountId,
 ) -> chain_spec::GenesisConfig {
@@ -99,11 +104,13 @@ fn genesis_constructor(
 		sudo_account.clone(),
 		Some(endowed_accounts.to_vec()),
 		enable_println,
+		technical_accounts.to_vec(),
 	)
 }
 
 fn generate_chain_spec(
 	authority_seeds: Vec<String>,
+	technical_accounts: Vec<String>,
 	endowed_accounts: Vec<String>,
 	sudo_account: String,
 ) -> Result<String, String> {
@@ -116,6 +123,10 @@ fn generate_chain_spec(
 		.iter()
 		.map(parse_account)
 		.collect::<Result<Vec<_>, String>>()?;
+	let technical_accounts = technical_accounts
+		.iter()
+		.map(parse_account)
+		.collect::<Result<Vec<_>, String>>()?;
 
 	let sudo_account = parse_account(&sudo_account)?;
 
@@ -123,7 +134,7 @@ fn generate_chain_spec(
 		"Custom",
 		"custom",
 		sc_chain_spec::ChainType::Live,
-		move || genesis_constructor(&authority_seeds, &endowed_accounts, &sudo_account),
+		move || genesis_constructor(&authority_seeds, &technical_accounts, &endowed_accounts, &sudo_account),
 		vec![],
 		None,
 		None,
@@ -225,8 +236,8 @@ fn main() -> Result<(), String> {
 	let builder = ChainSpecBuilder::from_args();
 	let chain_spec_path = builder.chain_spec_path().to_path_buf();
 
-	let (authority_seeds, endowed_accounts, sudo_account) = match builder {
-		ChainSpecBuilder::Generate { authorities, endowed, keystore_path, .. } => {
+	let (authority_seeds, endowed_accounts, technical_accounts, sudo_account) = match builder {
+		ChainSpecBuilder::Generate { authorities, technical, endowed, keystore_path, .. } => {
 			let authorities = authorities.max(1);
 			let rand_str = || -> String {
 				OsRng.sample_iter(&Alphanumeric)
@@ -236,6 +247,7 @@ fn main() -> Result<(), String> {
 
 			let authority_seeds = (0..authorities).map(|_| rand_str()).collect::<Vec<_>>();
 			let endowed_seeds = (0..endowed).map(|_| rand_str()).collect::<Vec<_>>();
+			let technical_seeds = (0..technical).map(|_| rand_str()).collect::<Vec<_>>();
 			let sudo_seed = rand_str();
 
 			print_seeds(
@@ -256,18 +268,24 @@ fn main() -> Result<(), String> {
 					.to_ss58check()
 			}).collect();
 
+			let technical_accounts = technical_seeds.iter().map(|seed| {
+				chain_spec::get_account_id_from_seed::<sr25519::Public>(seed)
+					.to_ss58check()
+			}).collect();
+
 			let sudo_account = chain_spec::get_account_id_from_seed::<sr25519::Public>(&sudo_seed)
 				.to_ss58check();
 
-			(authority_seeds, endowed_accounts, sudo_account)
+			(authority_seeds, endowed_accounts, technical_accounts, sudo_account)
 		},
-		ChainSpecBuilder::New { authority_seeds, endowed_accounts, sudo_account, .. } => {
-			(authority_seeds, endowed_accounts, sudo_account)
+		ChainSpecBuilder::New { authority_seeds, endowed_accounts, technical_accounts, sudo_account, .. } => {
+			(authority_seeds, endowed_accounts, technical_accounts, sudo_account)
 		},
 	};
 
 	let json = generate_chain_spec(
 		authority_seeds,
+		technical_accounts,
 		endowed_accounts,
 		sudo_account,
 	)?;
