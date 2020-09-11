@@ -3669,7 +3669,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "2.1.1"
+version = "2.2.2"
 dependencies = [
  "assert_cmd",
  "frame-benchmarking-cli",
