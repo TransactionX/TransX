@@ -96,7 +96,7 @@ enum VerifyStatus {
 }
 
 /// The module's configuration trait.
-pub trait Trait: BaseLocalAuthorityTrait + SendTransactionTypes<Call<Self>> + RegisterTrait{
+pub trait Trait: BaseLocalAuthorityTrait + SendTransactionTypes<Call<Self>>{
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 

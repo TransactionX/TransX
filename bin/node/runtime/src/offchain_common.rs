@@ -5,13 +5,14 @@ use pallet_timestamp as timestamp;
 use sp_runtime::RuntimeAppPublic;
 use frame_support::{Parameter,debug};
 use app_crypto::{sr25519};
-use frame_support::traits::FindAllAuthor;
+use frame_support::traits::{FindAllAuthor};
 use frame_system::{self as system};
 use sp_core::{crypto::KeyTypeId,offchain::Timestamp};
 use pallet_authority_discovery as authority_discovery;
 use sp_runtime::{offchain::http};
 use alt_serde::{Deserialize, Deserializer};
-
+use crate::register::{self,IsValidtorOcw, Trait as RegisterTrait};
+use frame_support::{StorageMap}; // 含有get
 pub const TX_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ofty");
 pub const VERIFY_STATUS: &[u8] = b"verify_status";  // 验证的返回状态
 
@@ -108,7 +109,7 @@ pub trait AccountIdPublicConver{
     fn into_account32(self)->Self::AccountId; // 转化为accountId
 }
 
-pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait{
+pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + RegisterTrait{
     type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
     type FindAllAuthor: FindAllAuthor<Self::AccountId>;
     fn authority_id() -> (Option<Self::AuthorityId>,Option<Self::AccountId>){
@@ -121,16 +122,16 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait{
         //         (*i).clone().into()
         //     }
         // ).collect::<Vec<sr25519::Public>>();
-        // let key_id = core::str::from_utf8(&Self::AuthorityId::ID.0).unwrap();
-        // debug::info!("当前的所有验证节点,validators keys: {:?}",validators);
-        // debug::info!("当前的节点 keytypeId: {:?}",key_id);
+        let key_id = core::str::from_utf8(&Self::AuthorityId::ID.0).unwrap();
+        debug::info!("当前的所有验证节点,validators keys: {:?}",validators);
+        debug::info!("当前的节点 keytypeId: {:?}",key_id);
 
         for i in Self::AuthorityId::all().iter(){   // 本地的账号
             let authority: Self::AuthorityId = (*i).clone();
             let  authority_sr25519: sr25519::Public = authority.clone().into();
             let s: Self::AccountId= authority.clone().into_account32();
-            // debug::info!("本地账号信息:{:?}",s);
-            if validators.contains(&s){
+            debug::info!("本地账号信息:{:?}",s);
+            if validators.contains(&s) && <IsValidtorOcw<Self>>::get(&s) == true{
                 debug::info!("找到了本地账号: {:?}",s);
                 return (Some(authority),Some(s));
             }

@@ -127,7 +127,8 @@ decl_storage! {
 		/// 所有矿工可解压的到期时间
 		pub UnbondTimeOfMiners get(fn unbond_time_of_miners): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
 
-
+		/// validtors 自愿开启ocw验证功能
+		pub IsValidtorOcw get(fn is_validtor_ocw): map hasher(blake2_128_concat) T::AccountId => bool = false;
 	}
 }
 
@@ -453,6 +454,14 @@ decl_module! {
 
 		}
 
+
+		#[weight = 500_000]
+		fn set_validator_ocw(origin,is_ocw: bool) -> DispatchResult {
+			// 不做判断是否是 validtor
+			let who = ensure_signed(origin)?;
+			<IsValidtorOcw<T>>::insert(who,is_ocw);
+			Ok(())
+		}
 	}
 }
 
