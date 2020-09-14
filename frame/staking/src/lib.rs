@@ -426,6 +426,7 @@ pub enum StakerStatus<AccountId> {
 }
 
 /// A destination account for payment.
+
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
 pub enum RewardDestination {
 	/// Pay into the stash account, increasing the amount at stake accordingly.

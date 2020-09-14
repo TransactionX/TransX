@@ -289,6 +289,7 @@ pub fn testnet_genesis(
 				..Default::default()
 			},
 		}),
+
 		pallet_sudo: Some(SudoConfig {
 			key: root_key,
 		}),

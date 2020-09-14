@@ -25,7 +25,7 @@ use crate::service::new_full_params;
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Transx Node".into()
+		"TransX Node".into()
 	}
 
 	fn impl_version() -> String {
