@@ -1397,6 +1397,12 @@ where
 		locks.retain(|l| l.id != id);
 		Self::update_locks(who, &locks[..]);
 	}
+
+	fn get_id_lock(id: LockIdentifier, who: &T::AccountId) -> Option<T::Balance>{
+		let lock = Self::locks(who).into_iter()
+		.filter(|i|i.id==id).nth(0)?;
+		Some(lock.amount)
+		}
 }
 
 impl<T: Trait<I>, I: Instance> IsDeadAccount<T::AccountId> for Module<T, I> where

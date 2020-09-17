@@ -1169,6 +1169,11 @@ pub trait LockableCurrency<AccountId>: Currency<AccountId> {
 		id: LockIdentifier,
 		who: &AccountId,
 	);
+
+	/// 获取 lock的amount
+	fn get_id_lock(id: LockIdentifier,who: &AccountId) -> Option<Self::Balance>{
+		None   // 默认实现不做任
+	}
 }
 
 /// A vesting schedule over a currency. This allows a particular currency to have vesting limits

@@ -706,7 +706,7 @@ impl<BlockNumber: PartialEq> ElectionStatus<BlockNumber> {
 		*self == Self::Open(n)
 	}
 
-	fn is_closed(&self) -> bool {
+	pub fn is_closed(&self) -> bool {  // 修改为pub, 方便外部调用
 		match self {
 			Self::Closed => true,
 			_ => false

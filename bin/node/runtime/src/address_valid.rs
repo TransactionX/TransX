@@ -114,20 +114,22 @@ pub trait Trait: BaseLocalAuthorityTrait + SendTransactionTypes<Call<Self>>{
 
 decl_event!(
   pub enum Event<T> where
-    Moment = <T as timestamp::Trait>::Moment,
     AccountId = <T as system::Trait>::AccountId,
+    BlockNumber = <T as system::Trait>::BlockNumber,
     {
-        FetchedSuc(AccountId,Moment, Vec<u8>, u64), // 当前address 状态记录事件
+        FetchedSuc(AccountId,BlockNumber, Vec<u8>, u64), // 当前address 状态记录事件
+
+        FailedEvent(AccountId,BlockNumber,Vec<u8>), // 记录返回错误的情况
   }
 );
 
 // This module's storage items.
 decl_storage! {
   trait Store for Module<T: Trait> as addressValid {
-        //记录查询结果,key: T::BlockNumber(1小时的周期数)+T::AccountId, val:(成功次数,2000x 状态码次数,5000x状态码次数).不会删除
+        ///记录查询结果,key: T::BlockNumber(1小时的周期数)+T::AccountId, val:(成功次数,2000x 状态码次数,5000x状态码次数).不会删除
        FetchRecord get(fn fetch_record): double_map hasher(blake2_128_concat) T::BlockNumber,hasher(blake2_128_concat) T::AccountId => (u32,u32,u32);
 
-       // 记录失败的,定期全部清除. Vec<FetchFailedOf<T>> 最多保持50个的长度.原本是 linked_map
+       /// 记录失败的,定期全部清除. Vec<FetchFailedOf<T>> 最多保持50个的长度.原本是 linked_map
        pub AddressFetchFailed get(fn fetch_failed): map hasher(blake2_128_concat) T::AccountId => Vec<FetchFailedOf<T>>;
   }
 }
@@ -211,7 +213,7 @@ decl_module! {
     #[weight = 0]
     fn record_fail_verify(
         _origin,
-        _block: T::BlockNumber,
+        block: T::BlockNumber,
         account: T::AccountId,
         key: <T as BaseLocalAuthorityTrait>::AuthorityId,
         tx: Vec<u8>,
@@ -233,17 +235,23 @@ decl_module! {
             let failed_struct = FetchFailedOf::<T> {
                     timestamp: now,
                     tx: tx.clone(),
-                    err: err
+                    err: err.clone()
             };
             let status:u64 = <TokenStatus<T>>::get(tx.clone()).0;
             debug::info!("------验证失败:status={:?},tx={:?}-------",status,hex::encode(&tx));
             Self::address_verify_handle(&tx);
-            <AddressFetchFailed<T>>::mutate(account, |fetch_failed| {
+            <AddressFetchFailed<T>>::mutate(&account, |fetch_failed| {
             if fetch_failed.len()>50{  // 最多保留50个的长度
                 fetch_failed.pop();
             }
             fetch_failed.push(failed_struct)
             });
+
+            if err == WAIT_HTTP_CONVER_REPONSE.as_bytes().to_vec(){ // 本地服务没开起来
+               T::slash_validtor(account.clone());
+            }
+
+            Self::deposit_event(RawEvent::FailedEvent(account.clone(),block,tx));
             debug::info!("------fetch失败记录上链成功:record_fail_verify--------");
             Ok(())
     }
@@ -264,7 +272,7 @@ decl_module! {
 
 
 impl<T: Trait> Module<T> {
-    fn offchain(block_num:T::BlockNumber,key: <T as BaseLocalAuthorityTrait>::AuthorityId, account: &T::AccountId) -> DispatchResult{
+    fn offchain(block_num: T::BlockNumber,key: <T as BaseLocalAuthorityTrait>::AuthorityId, account: &T::AccountId) -> DispatchResult{
 
         for (remote_src, remote_url) in ADDRESS_FETCHED_CRYPTS.iter() {
             // let (mut symbol, mut token_address,mut tx) = (vec![], vec![], vec![]);
@@ -578,7 +586,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
                 }
 
                 Ok(ValidTransaction {
-                    priority: T::UnsignedPriority::get(),
+                    priority: <T as Trait>::UnsignedPriority::get(),
                     requires: vec![],
                     provides: vec![(block_num,account_id,tx,status).encode()],
                     longevity: TransactionLongevity::max_value(),
@@ -597,7 +605,7 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
                     return InvalidTransaction::BadProof.into();
                 }
                 Ok(ValidTransaction {
-                    priority: T::UnsignedPriority::get(),
+                    priority: <T as Trait>::UnsignedPriority::get(),
                     requires: vec![],
                     provides: vec![(block,tx,err,account).encode()], // vec![(now).encode()],
                     longevity: TransactionLongevity::max_value(),

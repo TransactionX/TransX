@@ -10,6 +10,7 @@ use frame_support::{debug, ensure, decl_module, decl_storage, decl_error, decl_e
 use frame_system as system;
 use system::{ensure_signed, ensure_root};
 use sp_runtime::{DispatchResult, Perbill, Permill, Percent};
+use pallet_staking::{self,Trait as StakingTrait};
 use pallet_timestamp;
 use codec::{Encode, Decode};
 use crate::constants::{symbol::*, currency::DOLLARS};
@@ -64,7 +65,7 @@ pub struct MinerInfo<A, M, S> {
 
 
 
-pub trait Trait: pallet_timestamp::Trait + system::Trait{
+pub trait Trait: StakingTrait + pallet_timestamp::Trait + system::Trait{
 
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -129,6 +130,12 @@ decl_storage! {
 
 		/// validtors 自愿开启ocw验证功能
 		pub IsValidtorOcw get(fn is_validtor_ocw): map hasher(blake2_128_concat) T::AccountId => bool = false;
+
+		/// 记录 validtors node 没有开启本地服务导致的验证出错次数
+       pub ValidatorLocalSerErrCnt get(fn validator_local_ser_err_cnt): map hasher(blake2_128_concat) T::AccountId => u32=0;
+
+      /// 记录惩罚的时间, 数量最大 20次
+      pub SlashValidator get(fn slash_validator): map hasher(blake2_128_concat) T::AccountId => Vec<T::BlockNumber>;
 	}
 }
 
@@ -190,6 +197,14 @@ decl_error! {
 
 		/// 没有到释放锁的时间
 		NotUnbondTime,
+
+		/// 没有 REGISTER_ID 锁定 amout
+		 NoRegisterIdLock,
+
+		/// staking error
+		CallNotAllowed,
+
+		NotController,
 	}
 }
 
@@ -457,9 +472,25 @@ decl_module! {
 
 		#[weight = 500_000]
 		fn set_validator_ocw(origin,is_ocw: bool) -> DispatchResult {
-			// 不做判断是否是 validtor
-			let who = ensure_signed(origin)?;
-			<IsValidtorOcw<T>>::insert(who,is_ocw);
+			// 通过 controller 找到对应的stash账号
+			// 惩罚方式:: 按照掉线惩罚(未实现)
+			let controller = ensure_signed(origin)?;
+			ensure!(<pallet_staking::Module<T>>::era_election_status().is_closed(), Error::<T>::CallNotAllowed);
+			let ledger = <pallet_staking::Module<T>>::ledger(&controller).ok_or(Error::<T>::NotController)?;
+			let stash = &ledger.stash;
+
+			// match Self::Currency1::get_id_lock(REGISTER_ID, &who){
+			// 	None => return Error::<T>::NoRegisterIdLock;
+			// 	Some(amout) =>{
+			// 		if amout > <PledgeAmount<T>>::get(){
+			//
+			// 		}
+			// 	}
+			//
+			// }
+
+
+			<IsValidtorOcw<T>>::insert(stash,is_ocw);
 			Ok(())
 		}
 	}

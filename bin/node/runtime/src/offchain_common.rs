@@ -11,10 +11,16 @@ use sp_core::{crypto::KeyTypeId,offchain::Timestamp};
 use pallet_authority_discovery as authority_discovery;
 use sp_runtime::{offchain::http};
 use alt_serde::{Deserialize, Deserializer};
-use crate::register::{self,IsValidtorOcw, Trait as RegisterTrait};
-use frame_support::{StorageMap}; // 含有get
+use frame_support::{StorageMap,StorageValue,traits::{LockableCurrency,Currency}}; // 含有get
+
+use crate::register::{self,IsValidtorOcw, ValidatorLocalSerErrCnt, SlashValidator, Trait as RegisterTrait};
+use crate::report::{self,IllegalPunishment, Trait as ReportTrait};
+
+
 pub const TX_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ofty");
 pub const VERIFY_STATUS: &[u8] = b"verify_status";  // 验证的返回状态
+pub const PENDING_TIME_OUT: &'static str = "Error in waiting http response back";
+pub const WAIT_HTTP_CONVER_REPONSE: &'static str ="Error in waiting http_result convert response";
 
 #[serde(crate = "alt_serde")]
 #[derive(Deserialize, Encode, Decode, Default)]
@@ -54,6 +60,7 @@ pub type FetchFailedOf<T> = FetchFailed<<T as timestamp::Trait>::Moment>;
 
 pub type BlockNumberOf<T> = <T as system::Trait>::BlockNumber;  // u32
 pub type StdResult<T> = core::result::Result<T, &'static str>;
+
 // 为了兼容返回为空的情况
 pub type StrDispatchResult = core::result::Result<(), &'static str>;
 
@@ -109,7 +116,7 @@ pub trait AccountIdPublicConver{
     fn into_account32(self)->Self::AccountId; // 转化为accountId
 }
 
-pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + RegisterTrait{
+pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + ReportTrait{
     type AuthorityId: RuntimeAppPublic + Clone + Parameter+ Into<sr25519::Public> + From<sr25519::Public>+ AccountIdPublicConver<AccountId=Self::AccountId>;
     type FindAllAuthor: FindAllAuthor<Self::AccountId>;
     fn authority_id() -> (Option<Self::AuthorityId>,Option<Self::AccountId>){
@@ -155,8 +162,8 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + RegisterTr
             .map_err(|_| "Error in sending http POST request")?;
 
         let http_result = pending.try_wait(deadline)
-            .map_err(|_| "Error in waiting http response back")?;
-        let response = http_result.map_err(|_| "Error in waiting http_result convert response" )?;
+            .map_err(|_| PENDING_TIME_OUT)?; // "Error in waiting http response back"
+        let response = http_result.map_err(|_| WAIT_HTTP_CONVER_REPONSE )?;
 
         if response.code != 200 {
             debug::warn!("Unexpected status code: {}", response.code);
@@ -204,7 +211,32 @@ pub trait BaseLocalAuthorityTrait: timestamp::Trait + system::Trait + RegisterTr
         }?;
         Ok(status)
     }
+
+    fn slash_validtor(account: Self::AccountId) {
+        // 首先对 ValidatorLocalSerErrCnt+ 1
+        // 如果超过了 20次才处罚
+        // 处罚了之后就恢复为0,并且设置 IsValidtorOcw 为false,防止多次处罚.下次需要前段手动重置为true
+        if <ValidatorLocalSerErrCnt<Self>>::get(&account) < 20 {
+            <ValidatorLocalSerErrCnt<Self>>::mutate(&account, |cnt| *cnt += 1);
+        } else {
+            Self::Currency1::remove_lock(register::REGISTER_ID, &account);
+            Self::Currency1::slash(&account, <IllegalPunishment<Self>>::get());
+            <ValidatorLocalSerErrCnt<Self>>::mutate(&account, |cnt| *cnt = 0);
+            <IsValidtorOcw<Self>>::insert(&account, false);
+            let now = <system::Module<Self>>::block_number();
+            <SlashValidator<Self>>::mutate(&account, |blocks| {
+                if blocks.len() > 20 {
+                    blocks.pop();
+                }
+                blocks.push(now)
+                }
+            );
+        }
+    }
 }
+
+
+
 
 
 

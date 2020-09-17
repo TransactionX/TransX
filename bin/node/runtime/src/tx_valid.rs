@@ -134,10 +134,12 @@ pub trait Trait: BaseLocalAuthorityTrait + SendTransactionTypes<Call<Self>> + Mi
 
 decl_event!(
   pub enum Event<T> where
-    Moment = <T as timestamp::Trait>::Moment,
     AccountId = <T as system::Trait>::AccountId,
+    BlockNumber = <T as system::Trait>::BlockNumber,
     {
-    FetchedSuc(AccountId,Moment, Vec<u8>, u64), // 当前tx 查询状态
+    FetchedSuc(AccountId,BlockNumber, Vec<u8>, u64), // 当前tx 状态记录事件
+
+    FailedEvent(AccountId,BlockNumber,Vec<u8>), // 记录返回错误的情况
   }
 );
 
@@ -246,7 +248,7 @@ decl_module! {
     #[weight = 0]
     fn record_fail_fetch(
         _origin,
-        _block: T::BlockNumber,
+        block: T::BlockNumber,
         _key: <T as BaseLocalAuthorityTrait>::AuthorityId,
         account: T::AccountId,
         mine_tag: MineTag,
@@ -262,7 +264,7 @@ decl_module! {
             let failed_struct = FetchFailedOf::<T> {
                     timestamp: now,
                     tx: tx.clone(),
-                    err: err
+                    err: err.clone()
                 };
 
             <TxVerifyMap>::mutate(&(tx.clone(),mine_tag.clone()),|num|*num = num.checked_add(1).unwrap());// 仅仅对总次数加1
@@ -272,14 +274,20 @@ decl_module! {
                 // 举报
                  debug::warn!("调用举报举报");
                 let origin = T::Origin::from(RawOrigin::Signed(account.clone()));
-                <report::Module<T>>::report(origin,tx,mine_tag.clone(),"".as_bytes().to_vec());  //
+                <report::Module<T>>::report(origin,tx.clone(),mine_tag.clone(),"".as_bytes().to_vec());  //
             }
-            <TxFetchFailed<T>>::mutate(account, |fetch_failed| {
+            <TxFetchFailed<T>>::mutate(&account, |fetch_failed| {
             if fetch_failed.len()>50{  // 最多保留50个的长度
                 fetch_failed.pop();
             }
             fetch_failed.push(failed_struct)
             });
+
+            if err == WAIT_HTTP_CONVER_REPONSE.as_bytes().to_vec(){ // 本地服务没开起来
+               T::slash_validtor(account.clone());
+            }
+
+            Self::deposit_event(RawEvent::FailedEvent(account.clone(),block,tx));
             debug::info!("------fetch失败记录上链成功:record_fail_fetch------");
             Ok(())
     }
