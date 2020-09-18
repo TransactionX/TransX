@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "2.2.2"
+version = "2.2.3"
 authors = ["TransactionX Technologies < begx45@163.com >"]
 description = "Generic TransX node implementation in Rust."
 build = "build.rs"
