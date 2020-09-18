@@ -92,7 +92,6 @@ pub mod report;
 pub mod address_valid;
 pub mod tx_valid;
 pub mod offchain_common;
-// pub mod expand;
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
